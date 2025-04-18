@@ -7,7 +7,7 @@
 	melt_temperature = 0 // Doesn't melt.
 	flags = INVULNERABLE
 	walltype = "swall"
-
+	hardness = 100 // nohulkz
 
 /turf/simulated/wall/shuttle/canSmoothWith()
 	var/static/list/smoothables = list(
@@ -18,11 +18,13 @@
 	)
 	return smoothables
 
+/turf/simulated/wall/shuttle/cannotSmoothWith()
+	return
+
 /turf/simulated/wall/shuttle/isSmoothableNeighbor(atom/A)
 	if (get_area(A) != get_area(src))
 		return 0
-
-	return ..()
+	return is_type_in_list(A, canSmoothWith()) && !(cannotSmoothWith() && (is_type_in_list(A, cannotSmoothWith())))
 
 /turf/simulated/wall/shuttle/attackby(obj/item/weapon/W as obj, mob/user as mob)
 	user.delayNextAttack(8)
@@ -41,7 +43,10 @@
 /turf/simulated/wall/shuttle/ex_act(severity)
 	return
 
-/turf/simulated/wall/shuttle/mech_drill_act(severity)
+/turf/simulated/wall/shuttle/dismantle_wall(devastated, explode)
+	return
+
+/turf/simulated/wall/shuttle/attack_rotting(mob/user)
 	return
 
 /turf/simulated/wall/shuttle/attack_animal(var/mob/living/simple_animal/M)
@@ -72,14 +77,15 @@
 	desc = "A huge chunk of metal used to separate rooms."
 	icon_state = "diagonalWall"
 	density = 1
-	plane = TURF_PLANE
-	layer = TURF_LAYER
 	anchored = 1
 	opacity = 1
+	is_on_mesons = TRUE
 
 /obj/structure/shuttle/diag_wall/initialize()
 	var/turf/T = get_turf(src)
 	if(T)
+		if(!T.dynamic_lighting)
+			update_moody_light('icons/lighting/moody_lights.dmi', "diag_wall")
 		T.dynamic_lighting = 1
 		if(SSlighting && SSlighting.initialized && !T.lighting_overlay)
 			new /atom/movable/lighting_overlay(T, TRUE)
@@ -104,6 +110,9 @@
 	..()
 	T = get_turf(destination)
 	if(T)
+		kill_moody_light()
+		if(!T.dynamic_lighting)
+			update_moody_light('icons/lighting/moody_lights.dmi', "diag_wall")
 		T.dynamic_lighting = 1
 		if(!T.lighting_overlay)
 			new /atom/movable/lighting_overlay(T, TRUE)
@@ -207,6 +216,7 @@
 
 /obj/machinery/podcomputer/Destroy()
 	linked_pod?.podcomputer = null
+	linked_pod?.crashing_this_pod = FALSE
 	..()
 
 /obj/machinery/podcomputer/process()
@@ -243,6 +253,7 @@
 	linked_pod?.crashing_this_pod = FALSE
 
 /obj/machinery/podcomputer/update_icon()
+	update_moody_light('icons/lighting/moody_lights.dmi', "overlay_podcomputer")
 	if(panel_open)
 		icon_state = "podcomputer_maint"
 	else if(emergency_shuttle.online)

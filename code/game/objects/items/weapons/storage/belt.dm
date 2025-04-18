@@ -10,12 +10,8 @@
 	hitsound = "sound/weapons/whip.ogg"
 	restraint_resist_time = 30 SECONDS
 	toolsounds = list("rustle")
-
-/obj/item/weapon/storage/belt/can_quick_store(var/obj/item/I)
-	return can_be_inserted(I,1)
-
-/obj/item/weapon/storage/belt/quick_store(var/obj/item/I)
-	return handle_item_insertion(I,0)
+	w_type = RECYK_BIOLOGICAL //leather
+	flammable = TRUE
 
 /obj/item/weapon/storage/belt/utility
 	name = "tool-belt" //Carn: utility belt is nicer, but it bamboozles the text parsing.
@@ -51,7 +47,11 @@
 		"/obj/item/device/device_analyser",
 		"/obj/item/device/silicate_sprayer",
 		"/obj/item/device/geiger_counter",
-		"/obj/item/airshield_projector"
+		"/obj/item/airshield_projector",
+		"/obj/item/device/radio",
+		"/obj/item/device/gps",
+		"/obj/item/device/pager",
+		"/obj/item/blueprints/construction_permit"
 		)
 
 /obj/item/weapon/storage/belt/utility/complete/New()
@@ -88,6 +88,7 @@
 	desc = "The ancestral belt of Many-APCs-Charging, the original chief engineer from Space Native America. It's made out of the skins of the ancient enemy of engineers, giant spiders."
 	icon_state = "utilitychief"
 	item_state = "utilitychief"
+	flammable = FALSE //fireproof
 	fits_max_w_class = 5
 	can_only_hold = list(
 		"/obj/item/tool/crowbar",
@@ -119,25 +120,27 @@
 		"/obj/item/device/silicate_sprayer",
 		"/obj/item/device/geiger_counter",
 		"/obj/item/weapon/inflatable_dispenser",
-		"/obj/item/airshield_projector"
+		"/obj/item/airshield_projector",
+		"/obj/item/tool/irons",
+		"/obj/item/device/radio",
+		"/obj/item/device/gps",
+		"/obj/item/device/pager"
 		)
 
 /obj/item/weapon/storage/belt/utility/chief/full/New() //This is mostly for testing I guess
 	..()
-	new /obj/item/tool/crowbar(src)
-	new /obj/item/tool/screwdriver(src)
+	new /obj/item/tool/crowbar/halligan(src)
 	new /obj/item/tool/weldingtool/hugetank(src)
 	new /obj/item/tool/wirecutters(src)
 	new /obj/item/tool/wrench(src)
+	new /obj/item/tool/solder/screw(src)
 	new /obj/item/device/multitool(src)
-	new /obj/item/stack/cable_coil(src)
-	new /obj/item/stack/cable_coil(src)
-	new /obj/item/device/t_scanner(src)
-	new /obj/item/device/analyzer(src)
-	new /obj/item/tool/solder/pre_fueled(src)
 	new /obj/item/device/silicate_sprayer(src)
-	new /obj/item/device/rcd/rpd(src)
-	new /obj/item/device/rcd/matter/engineering/pre_loaded(src)
+	new /obj/item/device/t_scanner/advanced(src)
+	new /obj/item/device/analyzer(src)
+	new /obj/item/weapon/inflatable_dispenser(src)
+	new /obj/item/stack/cable_coil(src)
+
 
 
 /obj/item/weapon/storage/belt/medical
@@ -167,6 +170,7 @@
 		"/obj/item/device/flashlight/pen",
 		"/obj/item/clothing/mask/surgical",
 		"/obj/item/clothing/gloves/latex",
+		"/obj/item/clothing/accessory/stethoscope",
 		"/obj/item/device/mass_spectrometer",
 		"/obj/item/device/reagent_scanner",
 		"/obj/item/device/gps/paramedic",
@@ -176,6 +180,7 @@
 		"/obj/item/weapon/electrolyzer",
 		"/obj/item/weapon/autopsy_scanner/healthanalyzerpro",
 		"/obj/item/weapon/depocket_wand/suit",
+		"/obj/item/weapon/thermometer",
 		"/obj/item/taperoll/viro",
 		"/obj/item/taperoll/syndie/viro"
 	)
@@ -346,8 +351,8 @@
 	fits_max_w_class = 4
 	max_combined_w_class = 28
 	can_only_hold = list(
- 		/obj/item/device/aicard,
- 		/obj/item/device/mmi,
+ 		"/obj/item/device/aicard",
+ 		"/obj/item/device/mmi",
  	)
 
 /obj/item/weapon/storage/belt/silicon/New()
@@ -408,7 +413,8 @@
 		"/obj/item/device/wormhole_jaunter",
 		"/obj/item/weapon/lazarus_injector",
 		"/obj/item/weapon/anobattery",
-		"/obj/item/weapon/mining_drone_cube")
+		"/obj/item/weapon/mining_drone_cube",
+		"/obj/item/voucher/warp/kinetic_accelerator")
 
 /obj/item/weapon/storage/belt/lazarus
 	name = "trainer's belt"
@@ -525,7 +531,7 @@
 		"/obj/item/weapon/minihoe",
 		"/obj/item/weapon/hatchet",
 		"/obj/item/weapon/bee_net",
-		"/obj/item/weapon/gun/energy/floragun",
+		"/obj/item/floral_somatoray",
 		"/obj/item/weapon/fishtools",
 		"/obj/item/fish_eggs")
 

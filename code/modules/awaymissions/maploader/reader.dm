@@ -61,7 +61,11 @@ var/list/map_dimension_cache = list()
  * A list of all atoms created
  *
  */
-/dmm_suite/load_map(var/dmm_file as file, var/z_offset as num, var/x_offset as num, var/y_offset as num, var/datum/map_element/map_element as null, var/rotate as num, var/overwrite as num)
+/dmm_suite/load_map(var/dmm_file as file, var/z_offset as num, var/x_offset as num, var/y_offset as num, var/datum/map_element/map_element as null, var/rotate as num, var/overwrite as num, var/clipmin_x as num, var/clipmax_x as num, var/clipmin_y as num, var/clipmax_y as num, var/clipmin_z as num, var/clipmax_z as num)
+
+	clipmin_x = max(clipmin_x,1)
+	clipmin_y = max(clipmin_y,1)
+	clipmin_z = max(clipmin_z,1)
 
 	if((rotate % 90) != 0) //If not divisible by 90, make it
 		rotate += (rotate % 90)
@@ -71,7 +75,7 @@ var/list/map_dimension_cache = list()
 
 	//If this is true, the lag is reduced at the cost of slower loading speed, and tiny atmos leaks during loading
 	var/remove_lag
-	if(map_element.load_at_once)
+	if(map_element?.load_at_once)
 		remove_lag = FALSE
 	else if(ticker && ticker.current_state > GAME_STATE_PREGAME)
 		//Lag doesn't matter before the game
@@ -136,6 +140,10 @@ var/list/map_dimension_cache = list()
 
 	for(var/zpos=findtext(tfile,"\n(1,1,",lpos,0);zpos!=0;zpos=findtext(tfile,"\n(1,1,",zpos+1,0))	//in case there's several maps to load
 		zcrd++
+		if((zcrd+1) < clipmin_z)
+			continue
+		if((zcrd+1) > clipmax_z)
+			break
 		if(zcrd+z_offset > world.maxz)
 			world.maxz = zcrd+z_offset
 			map.addZLevel(new /datum/zLevel/away, world.maxz) //create a new z_level if needed
@@ -155,35 +163,55 @@ var/list/map_dimension_cache = list()
 		var/map_height = xy_grids.len
 		var/map_width = x_depth / key_len //To get the map's width, divide the length of the line by the length of the key
 
+		clipmax_x = min(clipmax_x,map_width)
+		clipmax_y = min(clipmax_y,map_height)
+
 		var/x_check = rotate == 0 || rotate == 180 ? map_width + x_offset : map_height + y_offset
 		var/y_check = rotate == 0 || rotate == 180 ? map_height + y_offset : map_width + x_offset
 		if(world.maxx < x_check)
+			var/old_max_x = world.maxx + 1
 			if(!map.can_enlarge)
 				WARNING("Cancelled load of [map_element] due to map bounds.")
 				return list()
 			world.maxx = x_check
+			if(get_base_turf(zcrd+z_offset) != /turf/space)
+				WARNING("Base turf in map enlargement is not /turf/space. New base turf = [get_base_turf(zcrd+z_offset)]")
+				for(var/turf/T in block(locate(old_max_x,1,zcrd+z_offset),locate(world.maxx,world.maxy,zcrd+z_offset)))
+					T.ChangeTurf(get_base_turf(zcrd+z_offset))
 			WARNING("Loading [map_element] enlarged the map. New max x = [world.maxx]")
 
 		if(world.maxy < y_check)
+			var/old_max_y = world.maxy + 1
 			if(!map.can_enlarge)
 				WARNING("Cancelled load of [map_element] due to map bounds.")
 				return list()
 			world.maxy = y_check
+			if(get_base_turf(zcrd+z_offset) != /turf/space)
+				WARNING("Base turf in map enlargement is not /turf/space. New base turf = [get_base_turf(zcrd+z_offset)]")
+				for(var/turf/T in block(locate(1,old_max_y,zcrd+z_offset),locate(world.maxx,world.maxy,zcrd+z_offset)))
+					T.ChangeTurf(get_base_turf(zcrd+z_offset))
 			WARNING("Loading [map_element] enlarged the map. New max y = [world.maxy]")
 
 		//then proceed it line by line, starting from top
-		ycrd = y_offset + map_height
-		ycrd_rotate = x_offset + map_width
-		ycrd_flip = y_offset + 1
-		ycrd_flip_rotate = x_offset + 1
+		ycrd = (y_offset + map_height + 1) - (map_height - clipmax_y)
+		ycrd_rotate = (x_offset + map_width + 1) - (map_height - clipmax_y)
+		ycrd_flip = y_offset + (map_height - clipmax_y)
+		ycrd_flip_rotate = x_offset + (map_height - clipmax_y)
 
-		for(var/grid_line in xy_grids)
+		var/grid_line
+		for(var/i in (map_height - (clipmax_y - 1)) to (map_height - (clipmin_y - 1)))
+			grid_line = xy_grids[i]
+			ycrd--
+			ycrd_rotate--
+			ycrd_flip++
+			ycrd_flip_rotate++
 			//fill the current square using the model map
-			xcrd=x_offset
-			xcrd_rotate=y_offset
-			xcrd_flip=x_offset + map_width + 1
-			xcrd_flip_rotate=y_offset + map_width + 1
-			for(var/mpos=1;mpos<=x_depth;mpos+=key_len)
+			xcrd=x_offset + (clipmin_x - 1)
+			xcrd_rotate=y_offset + (clipmin_x - 1)
+			xcrd_flip=x_offset + map_width + (clipmin_x)
+			xcrd_flip_rotate=y_offset + map_width + (clipmin_x)
+
+			for(var/mpos=1+(key_len*(clipmin_x-1));mpos<=x_depth-((map_width-clipmax_x)*key_len);mpos+=key_len)
 				xcrd++
 				xcrd_rotate++
 				xcrd_flip--
@@ -202,11 +230,6 @@ var/list/map_dimension_cache = list()
 					CHECK_TICK
 			if(map_element)
 				map_element.width = xcrd - x_offset
-
-			ycrd--
-			ycrd_rotate--
-			ycrd_flip++
-			ycrd_flip_rotate++
 
 			if(remove_lag)
 				CHECK_TICK
@@ -305,7 +328,8 @@ var/list/map_dimension_cache = list()
 
 	//Locate the area object
 	instance = locate(members[index])
-
+	if(!isarea(instance))
+		WARNING("Instance at [members[index]] is not an area!")
 	if(!isspace(instance)) //Space is the default area and contains every loaded turf by default
 		instance.contents.Add(locate(xcrd,ycrd,zcrd))
 		spawned_atoms.Add(instance)
@@ -340,7 +364,7 @@ var/list/map_dimension_cache = list()
 		last_turf_index++
 
 	//instanciate the last /turf
-	var/turf/T = instance_atom(members[last_turf_index],members_attributes[last_turf_index],xcrd,ycrd,zcrd,rotate)
+	var/turf/T = instance_atom(members[last_turf_index],members_attributes[last_turf_index],xcrd,ycrd,zcrd,rotate,overwrite)
 
 	if(first_turf_index != last_turf_index) //More than one turf is present - go from the lowest turf to the turf before the last one
 		var/turf_index = first_turf_index
@@ -356,9 +380,11 @@ var/list/map_dimension_cache = list()
 
 	//finally instance all remainings objects/mobs
 	for(index=1,index < first_turf_index,index++)
-		var/atom/new_atom = instance_atom(members[index],members_attributes[index],xcrd,ycrd,zcrd,rotate)
+		var/atom/new_atom = instance_atom(members[index],members_attributes[index],xcrd,ycrd,zcrd,rotate,overwrite)
 		spawned_atoms.Add(new_atom)
 
+	if(!spawned_atoms.len)
+		WARNING("No atoms spawned in grid parse! (Model key: [model])")
 	return spawned_atoms
 
 ////////////////
@@ -366,14 +392,18 @@ var/list/map_dimension_cache = list()
 ////////////////
 
 //Instance an atom at (x,y,z) and gives it the variables in attributes
-/dmm_suite/proc/instance_atom(var/path,var/list/attributes, var/x, var/y, var/z, var/rotate)
+/dmm_suite/proc/instance_atom(var/path,var/list/attributes, var/x, var/y, var/z, var/rotate, var/overwrite)
 	if(!path)
+		return
+	if(!overwrite && path == get_base_turf(z))
 		return
 	var/timestart = world.timeofday
 	var/atom/instance
 	_preloader.setup(attributes, path)
 
 	var/turf/T = locate(x,y,z)
+	if(!T)
+		WARNING("Turf at [x], [y], [z] not found!")
 	if(ispath(path, /turf)) //Turfs use ChangeTurf
 		if(path != T.type)
 			instance = T.ChangeTurf(path, allow = 1)
@@ -391,6 +421,8 @@ var/list/map_dimension_cache = list()
 	var/timetook2instance = world.timeofday - timestart
 	if(timetook2instance > 1)
 		log_debug("Slow atom instance. [instance] ([instance.type]) at [T?.x],[T?.y],[T?.z] took [timetook2instance/10] seconds to instance.")
+	//if(!instance)
+		//WARNING("No instance created or found at [T?.x],[T?.y],[T?.z]!")
 	return instance
 
 //text trimming (both directions) helper proc

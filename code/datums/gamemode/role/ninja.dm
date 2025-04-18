@@ -108,21 +108,32 @@ var/list/valid_ninja_suits = list(
 	)
 
 /obj/item/stack/shuriken
-	name = "EM shuriken"
+	name = "\improper EM shuriken"
 	desc = "A specially designed shuriken that can only be used to its full potential by one trained in Spider Clan techniques. Highly effective against unarmored targets."
 	icon = 'icons/obj/weapons.dmi'
 	icon_state = "shuriken"
 	singular_name = "shuriken"
 	throw_range = 20
 	force = 4
-	throwforce = 30
+	throwforce = 20
+	throw_speed = 5 //Converts into 30 thrown damage due to damage formula being throwforce * (throw_speed/5)
 	flags = NO_THROW_MSG //No fingerprints, no throw message
+	sharpness_flags = SHARP_TIP
 	w_class = W_CLASS_SMALL
 	max_amount = 10
 
 /obj/item/stack/shuriken/examine(mob/user)
 	..()
-	to_chat(user,"<span class='info'>They are specially designed for use one-handed. Attempting to throw the entire stack will throw only one.")
+	if(isninja(user))
+		to_chat(user,"<span class='info'>They are specially designed for one-handed use. Attempting to throw the entire stack will throw only one, and you can just click anything you want to throw it without having the intent to throw. They have a special adhesive coating that allows them to stick to targets for 5 seconds before falling off.</span>")
+
+/obj/item/stack/shuriken/preattack(atom/target, mob/user, proximity_flag, click_parameters)
+	if(can_stack_with(target) || proximity_flag || istype(target, /obj/abstract/screen)) //We're using this on the sheet, the target is right next to us or we're clicking a screen like a backpack
+		return ..()
+	if(isninja(user))
+		var/mob/living/L = user
+		L.throw_item(target)
+		return 1
 
 /obj/item/stack/shuriken/throw_at(var/atom/A, throw_range, throw_speed)
 	if(ishuman(usr))
@@ -152,6 +163,17 @@ var/list/valid_ninja_suits = list(
 		if(ismob(usr))
 			to_chat(usr,"<span class='warning'>You fumble with \the [src]!</span>")
 		//Sometimes things are thrown by objects like vending machines or pneumatic cannons
+
+//This can stick into silicons and humans
+/obj/item/stack/shuriken/throw_impact(atom/impacted_atom, speed, mob/user)
+	if(!..() && isliving(impacted_atom))
+		var/mob/living/L = impacted_atom
+		forceMove(L)
+		visible_message("<span class='warning'>\The [src] sticks to \the [L]!</span>")
+		sleep(5 SECONDS)
+		if(!gcDestroyed)
+			forceMove(L.loc)
+			visible_message("<span class='warning'>\The [src] falls off \the [L].", "<span class='warning'>You hear something clattering on the floor.</span>")
 
 /obj/item/stack/shuriken/pickup(mob/user)
 	var/datum/role/ninja/weeb = isninja(user)
@@ -267,6 +289,7 @@ var/list/valid_ninja_suits = list(
 	max_heat_protection_temperature = GLOVES_MAX_HEAT_PROTECTION_TEMPERATURE
 	heat_conductivity = INS_GLOVES_HEAT_CONDUCTIVITY
 	pressure_resistance = 200 * ONE_ATMOSPHERE
+	blocks_tracking = TRUE
 	var/cooldown = 0
 	var/shuriken_icon = "radial_print"
 	actions_types = list(
@@ -386,7 +409,7 @@ var/list/valid_ninja_suits = list(
 				list("Charge Sword", "radial_zap", "Reset the cooldown on your blade's teleport. Cost: [CHARGE_COST_MULTIPLIER]0 per second."),
 			)
 
-			var/task = show_radial_menu(usr,loc,choices,custom_check = new /callback(src, .proc/radial_check, user))
+			var/task = show_radial_menu(usr,loc,choices,custom_check = new /callback(src, nameof(src::radial_check()), user))
 			if(!radial_check(user))
 				return
 			switch(task)
@@ -586,6 +609,7 @@ Helpers For Both Variants
 	active_state = "blade1"
 	inhand_states = list("left_hand" = 'icons/mob/in-hand/left/swords_axes.dmi', "right_hand" = 'icons/mob/in-hand/right/swords_axes.dmi')
 	activeforce = 40
+	sharpness_on = 2
 	siemens_coefficient = 0
 	onsound = null
 	actions_types = list(/datum/action/item_action/toggle_teleport)
@@ -643,7 +667,7 @@ Helpers For Both Variants
 /obj/item/weapon/melee/energy/sword/ninja/equipped(mob/user)
 	if(!isninja(user) && active)
 		toggleActive(user,togglestate = "off")
-		to_chat(user,"<span class='warning'>The [src] shuts off.</span>")
+		to_chat(user,"<span class='warning'>\The [src] shuts off.</span>")
 	..()
 
 /*=======
@@ -752,6 +776,7 @@ Suit and assorted
 	permeability_coefficient = 0.01
 	mag_slow = NO_SLOWDOWN
 	clothing_flags = NOSLIP | MAGPULSE
+	species_fit = list(VOX_SHAPED)
 
 /obj/item/clothing/shoes/ninja/redsun
 	name = "sundowner boots"
@@ -898,6 +923,7 @@ Suit and assorted
 		spaceninja.internals.icon_state = "internal1"
 
 	spaceninja.see_in_dark_override = 8
+	spaceninja.dark_plane_alpha_override = 155
 
 /proc/equip_weeaboo(var/mob/living/carbon/human/H)
 	if(!istype(H))
@@ -922,6 +948,7 @@ Suit and assorted
 	H.equip_to_slot_or_del(new /obj/item/stack/shuriken/pizza(H,10), slot_l_store)
 
 	H.see_in_dark_override = 8
+	H.dark_plane_alpha_override = 155
 
 	var/datum/role/R = H.mind.GetRole(NINJA)
 	if(R)

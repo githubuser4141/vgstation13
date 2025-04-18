@@ -36,7 +36,7 @@ var/bee_mobs_count = 0
 	var/list/visited_plants = list()
 	var/datum/bee_species/bee_species = null
 	var/turf/building = null
-	pass_flags = PASSTABLE
+	pass_flags = PASSTABLE | PASSRAILING
 	turns_per_move = 6
 	density = 0
 	gender = PLURAL
@@ -60,6 +60,13 @@ var/bee_mobs_count = 0
 	held_items = list()
 
 	blooded = FALSE // certainly not enough blood there to matter
+
+	var/single_direction = TRUE
+
+/mob/living/simple_animal/bee/Move(NewLoc, Dir = 0, step_x = 0, step_y = 0, glide_size_override = 0)
+	..()
+	if (single_direction)
+		dir = SOUTH
 
 ///////////////////////////////Basic Procs//////////////////////////////////
 
@@ -89,6 +96,9 @@ var/bee_mobs_count = 0
 	qdel(src)
 
 /mob/living/simple_animal/bee/gib(var/animation = 0, var/meat = 1)
+	if(status_flags & BUDDHAMODE)
+		adjustBruteLoss(200)
+		return
 	death(1)
 	monkeyizing = 1
 	canmove = 0
@@ -629,6 +639,10 @@ var/bee_mobs_count = 0
 		return
 	if (!Adjacent(target))
 		return
+	if(isliving(target))
+		var/mob/living/L = target
+		if(!L.tangibility)
+			return
 	var/mob/living/carbon/human/M = target
 	var/sting_prob = 100
 	if(istype(M))
@@ -658,9 +672,9 @@ var/bee_mobs_count = 0
 			bee_species.after_sting(sting_quality)
 			return
 		if (BEE_STING_PIERCE)
-			M.visible_message("<span class='warning'>\The [src] are stinging \the [M] through their protection!</span>", "<span class='warning'>You have been stung by \the [src] through your protection!</span>")
+			M.visible_message("<span class='warning'>\The [src] [gender == PLURAL ? "are" : "is"] stinging \the [M] through their protection!</span>", "<span class='warning'>You have been stung by \the [src] through your protection!</span>")
 		if (BEE_STING_NORMAL)
-			M.visible_message("<span class='warning'>\The [src] are stinging \the [M]!</span>", "<span class='warning'>You have been stung by \the [src]!</span>")
+			M.visible_message("<span class='warning'>\The [src] [gender == PLURAL ? "are" : "is"] stinging \the [M]!</span>", "<span class='warning'>You have been stung by \the [src]!</span>")
 	M.apply_damage(current_physical_damage, BRUTE)
 	M.apply_damage(current_poison_damage, TOX)
 	M.flash_pain()

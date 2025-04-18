@@ -43,13 +43,13 @@
 			continue
 
 		currently_querying |= O
-		to_chat(O, "<span class='recruit'>Someone is harvesting [display_name]. You have been added to the list of potential ghosts. (<a href='?src=\ref[O];jump=\ref[host]'>Teleport</a> | <a href='?src=\ref[src];signup=\ref[O]'>Retract</a>)</span>")
+		to_chat(O, "<span class='recruit'>Someone is harvesting [display_name]. You have been added to the list of potential ghosts. ([formatGhostJump(host)] | <a href='?src=\ref[src];signup=\ref[O]'>Retract</a>)</span>")
 
 	for(var/mob/dead/observer/O in dead_mob_list - active_candidates)
 		if(!check_observer(O))
 			continue
 
-		to_chat(O, "<span class='recruit'>Someone is harvesting [display_name]. (<a href='?src=\ref[O];jump=\ref[host]'>Teleport</a> | <a href='?src=\ref[src];signup=\ref[O]'>Sign up</a>)</span>")
+		to_chat(O, "<span class='recruit'>Someone is harvesting [display_name]. ([formatGhostJump(host)] | <a href='?src=\ref[src];signup=\ref[O]'>Sign up</a>)</span>")
 
 	spawn(600)
 		if(!currently_querying || !currently_querying.len)
@@ -83,9 +83,6 @@
 
 	if(host.dna)
 		host.dna.real_name = host.real_name
-
-	// Update mode specific HUD icons.
-	callHook("harvest_podman", list(host))
 
 	to_chat(host, "<span class='good'><B>You awaken slowly, stirring into sluggish motion as the air caresses you.</B></span>")
 
@@ -130,7 +127,7 @@
 	if(O.has_enabled_antagHUD == 1 && config.antag_hud_restricted)
 		return 0
 
-	if(jobban_isbanned(O, "Dionaea") || (!is_alien_whitelisted(src, "Diona") && config.usealienwhitelist))
+	if(jobban_isbanned(O, "Dionaea"))
 		return 0
 
 	return O.client

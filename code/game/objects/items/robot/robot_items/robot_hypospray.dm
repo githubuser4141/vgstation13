@@ -18,8 +18,7 @@
 
 /obj/item/weapon/reagent_containers/borghypo/New(loc)
 	..(loc)
-	qdel(reagents)
-	reagents = null
+	QDEL_NULL(reagents)
 
 	for(var/reagent in reagent_ids)
 		var/datum/reagents/reagents = new(volume)
@@ -135,8 +134,8 @@
 
 /obj/item/weapon/reagent_containers/borghypo/crisis
 	name = "crisis hypospray"
-	desc = "A syndicate-exclusive emergency hypospray filled with potent stimulants and painkillers."
+	desc = "A syndicate-exclusive emergency hypospray filled with potent stimulants, medicines, painkillers and sedatives."
 	icon_state = "borghypo_s"
-	reagent_ids = list(TRICORDRAZINE, INAPROVALINE, COCAINE, OXYCODONE, TRAMADOL)
-	volume = 10
+	reagent_ids = list(DOCTORSDELIGHT, DEXALINP, METHAMPHETAMINE, OXYCODONE, CREATINE, CHLORALHYDRATE)
+	volume = 30
 	amount_per_transfer_from_this = 10

@@ -56,7 +56,6 @@
 	mob_push_flags = ALLMOBS //trundle trundle
 
 	var/opened = FALSE
-	var/emagged = FALSE
 	var/pulsecompromised = FALSE //Used for pulsedemons
 	var/illegal_weapons = FALSE
 	var/wiresexposed = FALSE
@@ -134,8 +133,8 @@
 
 	updateicon()
 
-	hud_list[DIAG_HEALTH_HUD] = image('icons/mob/hud.dmi', src, "huddiagmax")
-	hud_list[DIAG_CELL_HUD] = image('icons/mob/hud.dmi', src, "hudbattmax")
+	hud_list[DIAG_HEALTH_HUD] = new/image/hud('icons/mob/hud.dmi', src, "huddiagmax")
+	hud_list[DIAG_CELL_HUD] = new/image/hud('icons/mob/hud.dmi', src, "hudbattmax")
 
 	..()
 
@@ -144,7 +143,7 @@
 
 	if(mind && !stored_freqs)
 		spawn(1)
-			mind.store_memory("Frequencies list: <br/><b>Command:</b> [COMM_FREQ] <br/> <b>Security:</b> [SEC_FREQ] <br/> <b>Medical:</b> [MED_FREQ] <br/> <b>Science:</b> [SCI_FREQ] <br/> <b>Engineering:</b> [ENG_FREQ] <br/> <b>Service:</b> [SER_FREQ] <b>Cargo:</b> [SUP_FREQ]<br/> <b>AI private:</b> [AIPRIV_FREQ]<br/>")
+			mind.store_memory("Frequencies list: <br/><b>Command:</b> [COMM_FREQ] <br/> <b>Security:</b> [SEC_FREQ] <br/> <b>Medical:</b> [MED_FREQ] <br/> <b>Science:</b> [SCI_FREQ] <br/> <b>Engineering:</b> [ENG_FREQ] <br/> <b>Service:</b> [SER_FREQ] <b>Cargo:</b> [SUP_FREQ]<br/> <b>AI private:</b> [AIPRIV_FREQ]<br/>", category=MIND_MEMORY_GENERAL, forced=TRUE)
 		stored_freqs = 1
 
 	if(cell)
@@ -534,6 +533,8 @@
 /mob/living/silicon/robot/cancelAlarm(var/class, area/A as area, obj/origin)
 	var/list/L = alarms[class]
 	var/cleared = FALSE
+	if(!A)
+		return FALSE
 	for (var/I in L)
 		if(I == A.name)
 			var/list/alarm = L[I]
@@ -817,6 +818,8 @@
 				updateicon()
 			else
 				to_chat(user, "<span class='warning'>Access denied.</span>")
+	else if(isEmag(W))
+		emag_check(W,user)
 	else if(istype(W, /obj/item/device/toner))
 		if(toner >= tonermax)
 			to_chat(user, "The toner level of [src] is at its highest level possible")
@@ -943,6 +946,7 @@
 
 /mob/living/silicon/robot/attack_animal(mob/living/simple_animal/M)
 	M.unarmed_attack_mob(src)
+	return 1
 
 /mob/living/silicon/robot/attack_hand(mob/living/user)
 	add_fingerprint(user)
@@ -1044,7 +1048,7 @@
 		overlays += image(icon = icon, icon_state = "[icon_state]-shield")
 
 	if(base_icon)
-		if(module_active && istype(module_active,/obj/item/borg/combat/mobility) && has_icon(icon, "[icon_state]-roll"))
+		if(istype(module_active,/obj/item/borg/combat/mobility) && has_icon(icon, "[base_icon]-roll"))
 			icon_state = "[base_icon]-roll"
 		else
 			icon_state = base_icon
@@ -1200,7 +1204,7 @@
 		to_chat(src, "<span style=\"font-family:Courier\">\[<span class='danger'>ALERT</span>\]Termination signal detected. Scrambling security and identification codes.</span>")
 		UnlinkSelf()
 		return FALSE
-	to_chat(src, "<span style=\"font-family:Courier\">\[<span class='danger'>ALERT</span>\]Self-Destruct signal recieved.</span>")
+	to_chat(src, "<span style=\"font-family:Courier\">\[<span class='danger'>ALERT</span>\]Self-Destruct signal received.</span>")
 	gib()
 	return TRUE
 
@@ -1272,7 +1276,7 @@
 		return FALSE
 	lockdown = state
 	if(lockdown)
-		to_chat(src, "<span style=\"font-family:Courier\"><b>\[<span class='danger'>ALERT</span>\] Lockdown signal recieved. Halting all activity.</b></span>")
+		to_chat(src, "<span style=\"font-family:Courier\"><b>\[<span class='danger'>ALERT</span>\] Lockdown signal received. Halting all activity.</b></span>")
 		src << 'sound/machines/twobeep.ogg'
 	else
 		to_chat(src, "<span style=\"font-family:Courier\"><b>\[<span class='notice'>INFO</span>\] Your lockdown has been lifted.</b></span>")
@@ -1338,14 +1342,6 @@
 	module.remove_languages(src)
 	module = null
 
-/mob/living/silicon/robot/hasHUD(var/hud_kind)
-	switch(hud_kind)
-		if(HUD_MEDICAL)
-			return sensor_mode == 2
-		if(HUD_SECURITY)
-			return sensor_mode == 1
-	return FALSE
-
 /mob/living/silicon/robot/identification_string()
 	return "[name] ([modtype] [braintype])"
 
@@ -1377,3 +1373,9 @@
 //Currently only used for borg movement, to avoid awkward situations where borgs with RTG or basic cells are always slowed down
 /mob/living/silicon/robot/proc/get_percentage_power_for_movement()
 	return clamp(round(cell.maxcharge/4), 0, SILI_LOW_TRIGGER)
+
+/mob/living/silicon/robot/ignite()
+	if(module && locate(/obj/item/borg/fire_shield, module.modules))
+		return
+	else
+		..()

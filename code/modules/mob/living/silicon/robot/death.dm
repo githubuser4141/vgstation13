@@ -1,4 +1,7 @@
 /mob/living/silicon/robot/gib(animation = FALSE, meat = TRUE)
+	if(status_flags & BUDDHAMODE)
+		adjustBruteLoss(200)
+		return
 	//robots don't die when gibbed. instead they drop their MMI'd brain
 	if(!isUnconscious())
 		forcesay("-")
@@ -30,15 +33,14 @@
 	anim(target = src, a_icon = 'icons/mob/mob.dmi', flick_anim = "dust-r", sleeptime = 15)
 	new /obj/effect/decal/remains/robot(loc)
 	if(mmi)
-		qdel(mmi)	//Delete the MMI first so that it won't go popping out.
-		mmi = null
+		QDEL_NULL(mmi)	//Delete the MMI first so that it won't go popping out.
 
 	dead_mob_list -= src
 	qdel(src)
 
 
 /mob/living/silicon/robot/death(gibbed)
-	if(stat == DEAD)
+	if((status_flags & BUDDHAMODE) || stat == DEAD)
 		return
 	if(connected_ai)
 		if(connected_ai.explosive_cyborgs)
@@ -73,7 +75,7 @@
 
 	tod = worldtime2text() //weasellos time of death patch
 	if(mind)
-		mind.store_memory("Time of death: [tod]", 0)
+		mind.store_memory("Time of death: [tod]", category=MIND_MEMORY_GENERAL, forced=TRUE)
 		if(!mind.suiciding)
 			score.deadsilicon += 1
 

@@ -10,6 +10,8 @@
 	name = "law planning frame"
 	desc = "A large data pad with buttons for crimes. Used for planning a brig sentence."
 	w_class = W_CLASS_SMALL
+	w_type = RECYK_ELECTRONIC
+	flammable = TRUE
 	origin_tech = Tc_PROGRAMMING + "=6"
 	icon = 'icons/obj/device.dmi'
 	icon_state = "lawplanner"

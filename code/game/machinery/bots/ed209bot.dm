@@ -23,7 +23,6 @@
 	//var/lasers = 0
 
 	var/threatlevel = 0
-//var/emagged = 0 //Emagged Secbots view everyone as a criminal
 	var/check_records = 1 //Does it check security records?
 	var/arrest_type = 0 //If true, don't handcuff
 
@@ -40,12 +39,11 @@
 		/obj/item/weapon/gun/energy/tag,
 		/obj/item/weapon/gun/energy/laser/practice,
 		/obj/item/weapon/gun/hookshot,
-		/obj/item/weapon/gun/energy/floragun,
 		/obj/item/weapon/melee/defibrillator
 		)
 
 	target_chasing_distance = 12
-	commanding_radio = /obj/item/radio/integrated/signal/bot/beepsky
+	commanding_radios = list(/obj/item/radio/integrated/signal/bot/beepsky)
 
 /obj/item/weapon/ed209_assembly
 	name = "ED-209 assembly"

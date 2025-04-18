@@ -5,9 +5,13 @@
 	icon = 'icons/obj/objects.dmi'
 	icon_state = "target_h"
 	density = 0
+	w_class = W_CLASS_LARGE
+	w_type = RECYK_WOOD
+	flammable = TRUE
 	var/hp = 1800
 	var/icon/virtualIcon
 	var/list/bulletholes = list()
+
 
 /obj/item/target/Destroy()
 	// if a target is deleted and associated with a stake, force stake to forget

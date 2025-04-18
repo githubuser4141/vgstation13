@@ -1,7 +1,7 @@
 /spell/targeted/projectile/dumbfire/fireball
 	name = "Fireball"
 	abbreviation = "FB"
-	desc = "This spell conjures a fireball that will fly in the direction you're facing and explode on collision with anything, or when it gets close to anyone else."
+	desc = "This spell conjures a fireball that will fly in the direction you're facing and explode on collision with anything."
 	user_type = USER_TYPE_WIZARD
 	specialization = SSOFFENSIVE
 
@@ -15,10 +15,10 @@
 	range = 20
 	cooldown_min = 20 //10 deciseconds reduction per rank
 
-	spell_flags = 0
 	spell_aspect_flags = SPELL_FIRE
 	duration = 20
 	projectile_speed = 1
+	cast_prox_range = 0
 
 	amt_dam_brute = 40
 	amt_dam_fire = 45
@@ -35,7 +35,7 @@
 /spell/targeted/projectile/dumbfire/fireball/prox_cast(var/list/targets, spell_holder)
 	for(var/mob/living/M in targets)
 		apply_spell_damage(M)
-	explosion(get_turf(spell_holder), ex_severe, ex_heavy, ex_light, ex_flash, whodunnit = spell_holder)
+	explosion(get_turf(spell_holder), ex_severe, ex_heavy, ex_light, ex_flash, whodunnit = holder)
 	return targets
 
 /spell/targeted/projectile/dumbfire/fireball/choose_prox_targets(mob/user = usr, var/atom/movable/spell_holder)
@@ -63,7 +63,7 @@
 
 	return "You have improved Fireball into [name]. [explosion_description]"
 
-/spell/targeted/projectile/dumbfire/fireball/is_valid_target(var/atom/target)
+/spell/targeted/projectile/dumbfire/fireball/is_valid_target(atom/target, mob/user, options, bypass_range = 0)
 	if(!istype(target))
 		return 0
 	if(target == holder)

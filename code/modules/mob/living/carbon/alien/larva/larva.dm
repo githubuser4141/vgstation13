@@ -3,7 +3,7 @@
 	real_name = "alien larva"
 	icon_state = "larva0"
 	status_flags = CANSTUN|UNPACIFIABLE
-	pass_flags = PASSTABLE
+	pass_flags = PASSTABLE | PASSRAILING
 
 	maxHealth = 25
 	health = 25
@@ -150,7 +150,6 @@
 	return FALSE
 
 /mob/living/carbon/alien/larva/var/co2overloadtime = null
-/mob/living/carbon/alien/larva/var/temperature_resistance = T0C+75
 
 // new damage icon system
 // now constructs damage icon for each organ from mask * damage field
@@ -172,6 +171,7 @@
 /mob/living/carbon/alien/larva/reset_layer()
 	if(stat == DEAD)
 		plane = MOB_PLANE
+	loc.adjust_layer(src)
 
 /mob/living/carbon/alien/larva/proc/transfer_personality(var/client/candidate)
 	ckey = candidate.ckey

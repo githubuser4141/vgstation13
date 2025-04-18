@@ -9,6 +9,8 @@
 	throw_speed = 5
 	throw_range = 3
 	w_class = W_CLASS_MEDIUM
+	w_type = RECYK_WOOD
+	flammable = TRUE
 	flags = FPRINT
 	attack_verb = list("mops", "bashes", "bludgeons", "whacks", "slaps", "whips")
 
@@ -34,6 +36,12 @@
 	for(var/obj/effect/O in A)
 		if(iscleanaway(O))
 			qdel(O)
+
+	if (A.advanced_graffiti)
+		A.overlays -= A.advanced_graffiti_overlay
+		A.advanced_graffiti_overlay = null
+		qdel(A.advanced_graffiti)
+
 	reagents.reaction(A,1,10) //Mops magically make chems ten times more efficient than usual, aka equivalent of 50 units of whatever you're using
 	A.clean_blood()
 	playsound(src, get_sfx("mop"), 25, 1)
@@ -59,8 +67,12 @@
 		if(reagents.total_volume < 1)
 			to_chat(user, "<span class='notice'>Your mop is dry!</span>")
 			return
-		user.visible_message("<span class='warning'>[user] cleans \the [get_turf(A)].</span>", "<span class='notice'>You clean \the [get_turf(A)].</span>")
+		user.visible_message("<span class='[arcanetampered ? "sinister" : "warning"]'>[user] cleans \the [get_turf(A)].</span>", "<span class='[arcanetampered ? "sinister" : "notice"]'>You clean \the [get_turf(A)].</span>")
 		user.delayNextAttack(10)
-		clean(get_turf(A))
+		if(arcanetampered)
+			var/dirttype = pick(subtypesof(/obj/effect/decal/cleanable))
+			new dirttype(get_turf(A))
+		else
+			clean(get_turf(A))
 		reagents.remove_any(1) //Might be a tad wonky with "special mop mixes", but fuck it
 	update_icon()

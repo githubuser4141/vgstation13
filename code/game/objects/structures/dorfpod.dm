@@ -153,9 +153,9 @@ var/obj/structure/dorfpod/center/dorfpod
 
 	H.adjustCloneLoss(rand(50,60))
 	H.adjustBrainLoss(rand(20,30))
-	H.check_mutations = TRUE
+	H.check_mutations = M_CHECK_ALL
 	H.Paralyse(4)
-	H.stat = UNCONSCIOUS
+	H.stat = H.status_flags & BUDDHAMODE ? CONSCIOUS : UNCONSCIOUS
 	H.updatehealth()
 
 	has_been_shade.Remove(clonemind)

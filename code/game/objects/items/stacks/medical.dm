@@ -6,6 +6,8 @@
 	max_amount = 5
 	restock_amount = 2
 	w_class = W_CLASS_TINY
+	w_type = RECYK_FABRIC
+	flammable = TRUE
 	throw_speed = 4
 	throw_range = 10
 	var/heal_brute = 0

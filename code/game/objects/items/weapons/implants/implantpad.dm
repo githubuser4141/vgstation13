@@ -7,6 +7,8 @@
 	throw_speed = 1
 	throw_range = 5
 	w_class = W_CLASS_SMALL
+	w_type = RECYK_ELECTRONIC
+	flammable = TRUE
 	var/obj/item/weapon/implantcase/case = null
 	var/broadcasting = null
 	var/listening = 1.0
@@ -25,7 +27,7 @@
 		return ..()
 
 /obj/item/weapon/implantpad/proc/eject(mob/user)
-	user.put_in_active_hand(case)
+	user.put_in_hands(case)
 
 	case.add_fingerprint(user)
 	case = null

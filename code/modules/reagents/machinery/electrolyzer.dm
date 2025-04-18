@@ -9,6 +9,9 @@
 	var/list/beakers = new/list()
 	var/list/allowed_containers = list(/obj/item/weapon/reagent_containers/glass, /obj/item/weapon/reagent_containers/food/drinks/soda_cans/)
 
+/obj/item/weapon/electrolyzer/splashable()
+	return FALSE
+
 /obj/item/weapon/electrolyzer/New()
 	. = ..()
 
@@ -111,9 +114,6 @@
 		..()
 
 /obj/item/weapon/electrolyzer/proc/insert_beaker(obj/item/weapon/W as obj, mob/user as mob)
-	if(user.drop_item(W, src))
+	if(user.drop_item(W, src, failmsg = TRUE))
 		W.forceMove(src)
 		beakers += W
-	else
-		to_chat(user, "<span class='warning'>You can't let go of \the [W]!</span>")
-		return

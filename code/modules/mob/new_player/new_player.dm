@@ -83,22 +83,21 @@
 			stat("Game Mode:", "[master_mode]")
 
 		if(SSticker.initialized)
-			if((ticker.current_state == GAME_STATE_PREGAME) && going)
-				stat("Time To Start:", (round(ticker.pregame_timeleft - world.timeofday) / 10)) //rounding because people freak out at decimals i guess
-			if((ticker.current_state == GAME_STATE_PREGAME) && !going)
-				stat("Time To Start:", "DELAYED")
+			if(ticker.current_state == GAME_STATE_PREGAME)
+				if(going)
+					stat("Time To Start:", (round(ticker.pregame_timeleft - world.timeofday) / 10)) //rounding because people freak out at decimals i guess
+				else
+					stat("Time To Start:", "DELAYED")
+				stat("Players: [totalPlayers]", "Players Ready: [totalPlayersReady]")
+				totalPlayers = 0
+				totalPlayersReady = 0
+				for(var/mob/new_player/player in player_list)
+					stat("[player.key]", (player.ready)?("(Playing)"):(null))
+					totalPlayers++
+					if(player.ready)
+						totalPlayersReady++
 		else
 			stat("Time To Start:", "LOADING...")
-
-		if(SSticker.initialized && ticker.current_state == GAME_STATE_PREGAME)
-			stat("Players: [totalPlayers]", "Players Ready: [totalPlayersReady]")
-			totalPlayers = 0
-			totalPlayersReady = 0
-			for(var/mob/new_player/player in player_list)
-				stat("[player.key]", (player.ready)?("(Playing)"):(null))
-				totalPlayers++
-				if(player.ready)
-					totalPlayersReady++
 
 /mob/new_player/Topic(href, href_list[])
 	//var/timestart = world.timeofday
@@ -109,7 +108,7 @@
 	if(!client)
 		return 0
 
-	if(secret_check_one(src,href_list))
+	if(voting_age_check(src,href_list))
 		return 0
 
 	if(href_list["show_preferences"])
@@ -154,12 +153,6 @@
 			to_chat(usr, "<span class='warning'>The round is either not ready, or has already finished...</span>")
 			return
 
-		if(client.prefs.species != "Human")
-
-			if(!is_alien_whitelisted(src, client.prefs.species) && config.usealienwhitelist)
-				to_chat(src, alert("You are currently not whitelisted to play [client.prefs.species]."))
-				return 0
-
 		LateChoices()
 	if(href_list["cluwnebanned"])
 		if(!iscluwnebanned(usr))
@@ -185,10 +178,6 @@
 		if(!enter_allowed)
 			to_chat(usr, "<span class='notice'>There is an administrative lock on entering the game!</span>")
 			return
-
-		if(!is_alien_whitelisted(src, client.prefs.species) && config.usealienwhitelist)
-			to_chat(src, alert("You are currently not whitelisted to play [client.prefs.species]."))
-			return 0
 
 		AttemptLateSpawn(href_list["SelectedJob"])
 		return
@@ -274,7 +263,7 @@
 								return
 
 						vote_on_numval_poll(pollid, optionid, rating)
-			if("MULTICHOICE")
+			if("SELECT_ALL_THAT_APPLY")
 				var/id_min = text2num(href_list["minoptionid"])
 				var/id_max = text2num(href_list["maxoptionid"])
 
@@ -367,7 +356,11 @@
 
 	job_master.AssignRole(src, rank, 1)
 
-	var/mob/living/carbon/human/character = create_character(1)	//creates the human and transfers vars and mind
+	if(job_master.alt_database_active)
+		rank = src.mind.assigned_role
+		job = job_master.GetJob(rank)
+
+	var/mob/living/carbon/human/character = create_human(client.prefs)	//creates the human and transfers vars and mind
 	if(character.client.prefs.randomslot)
 		character.client.prefs.random_character_sqlite(character, character.ckey)
 
@@ -397,10 +390,13 @@
 		mime.AssignToRole(character.mind,1)
 		mime.Greet(GREET_ROUNDSTART)
 
-	var/turf/T = character.loc
 
-	if(character.mind.assigned_role != "MODE")
-		job_master.EquipRank(character, rank, 1) //Must come before OnPostSetup for uplinks
+	if(job && character.mind.assigned_role != "MODE")
+		job_master.PostJobSetup(character)
+		if(job.department_prioritized) // If Department is Prioritized, equip them with priority equipment.
+			job.equip(character, TRUE)
+		else
+			job.equip(character, job.priority) // Outfit datum.
 
 	for(var/role in character.mind.antag_roles)
 		var/datum/role/R = character.mind.antag_roles[role]
@@ -410,12 +406,12 @@
 
 	job_master.CheckPriorityFulfilled(rank)
 
+	var/turf/T = character.loc
 	if (character.loc != T) //Offstation antag. Continue no further, as there will be no announcement or manifest injection.
 		//Removal of job slot is in role/role.dm
 		character.store_position()
 		qdel(src)
 		return
-
 
 	EquipCustomItems(character)
 
@@ -442,10 +438,12 @@
 		to_chat(character, "<span class='notice'>Tip: Use the BBD in your suit's pocket to place bombs.</span>")
 		to_chat(character, "<span class='notice'>Try to keep your BBD and escape this hell hole alive!</span>")
 
+	for(var/datum/faction/F in ticker.mode.factions) /* Ensure all existing factions receive notice of the latejoin to handle what they need to. */
+		register_event(/event/late_arrival, F, nameof(F::OnLateArrival())) //Wrapped in nameof() to ensure that the parent proc doesn't get called. Possibly a BYOND bug?
+
 	if(character.mind.assigned_role != "MODE")
 		if(character.mind.assigned_role != "Cyborg")
 			data_core.manifest_inject(character)
-			ticker.minds += character.mind//Cyborgs and AIs handle this in the transform proc.	//TODO!!!!! ~Carn
 			if(character.mind.assigned_role == "Trader")
 				//If we're a trader, instead send a message to PDAs with the trader cartridge
 				for (var/obj/item/device/pda/P in PDAs)
@@ -458,7 +456,7 @@
 						handle_render(M,"<span class='game say'>PDA Message - <span class='name'>Trader [character.real_name] has arrived in the sector from space.</span></span>",character) //handle_render generates a Follow link
 			else
 				AnnounceArrival(character, rank)
-				CallHook("Arrival", list("character" = character, "rank" = rank))
+				INVOKE_EVENT(src, /event/late_arrival, "character" = character, "rank" = rank)
 			character.DormantGenes(20,10,0,0) // 20% chance of getting a dormant bad gene, in which case they also get 10% chance of getting a dormant good gene
 		else
 			character.Robotize()
@@ -475,7 +473,13 @@
 		//Error! We have no targetable spawn!
 		return
 	var/turf/start_point = locate(TRANSITIONEDGE + 2, rand((TRANSITIONEDGE + 2), world.maxy - (TRANSITIONEDGE + 2)), endpoint.z)
-	target.forceMove(start_point)
+	if(ishuman(target))
+		var/mob/living/carbon/human/H = target
+		var/obj/item/airbag/A = new(start_point, TRUE)
+		A.deploy(H)
+		target = A
+	else
+		target.forceMove(start_point)
 	target.throw_at(endpoint)
 
 
@@ -493,11 +497,13 @@
 		Broadcast_Message(speech, vmask=null, data=0, compression=0, level=list(0,1))
 		qdel(speech)
 
+/proc/voting_age_check(var/mob/M,var/list/href_list)
+	if(href_list["votepollid"] && href_list["votetype"])
+		if(M.client && !M.client.holder && M.client.player_age < 30)
+			message_admins("[key_name(M)] attempted to vote in poll # [href_list["votepollid"]] despite their player age of [M.client.player_age].")
+			return TRUE
+
 /mob/new_player/proc/LateChoices()
-	var/mills = world.time // 1/10 of a second, not real milliseconds but whatever
-	//var/secs = ((mills % 36000) % 600) / 10 //Not really needed, but I'll leave it here for refrence.. or something
-	var/mins = (mills % 36000) / 600
-	var/hours = mills / 36000
 
 	var/list/highprior = new()
 	var/list/heads = new()
@@ -518,9 +524,10 @@
 		.manifest tr.alt td {background-color: #DEF}
 		.manifest tr.striked td {background-color: #999}
 		.manifest tr.request td {background-color: #F99}
+		.manifest tr.requested_department td {background-color: #00FF00}
 		.manifest th.reqhead td {background-color: #844}
 		.manifest tr.reqalt td {background-color: #FCC}
-		</style></head><body><center>Round Duration: [round(hours)]h [round(mins)]m<br>"}
+		</style></head><body><center>Shift duration: [getShiftDuration()]<br>"}
 	if(emergency_shuttle) //In case Nanotrasen decides reposess CentComm's shuttles.
 		if(emergency_shuttle.direction == 2) //Shuttle is going to centcomm, not recalled
 			dat += "<font color='red'><b>The station has been evacuated.</b></font><br>"
@@ -574,7 +581,9 @@
 			if((job.species_whitelist.len && !job.species_whitelist.Find(client.prefs.species)) || (job.species_blacklist.len && job.species_blacklist.Find(client.prefs.species)))
 				dat += "<tr class='striked'><td><s>[job.title]</s></td><td><s>[job.current_positions]</s></td><td><s>[highprior[job]]</s></td></tr>"
 				continue
-
+			if(job.department_prioritized)
+				dat += "<tr class='requested_department'><td><a href='byond://?src=\ref[src];SelectedJob=[job.title]'>[job.title]</a></td><td>[job.current_positions]</td><td>[heads[job]]</td></tr>"
+				continue
 			dat += "<tr[color ? " class='alt'" : ""]><td><a href='byond://?src=\ref[src];SelectedJob=[job.title]'>[job.title]</a></td><td>[job.current_positions]</td><td>[heads[job]]</td></tr>"
 			color = !color
 
@@ -624,7 +633,9 @@
 			if((job.species_whitelist.len && !job.species_whitelist.Find(client.prefs.species)) || (job.species_blacklist.len && job.species_blacklist.Find(client.prefs.species)))
 				dat += "<tr class='striked'><td><s>[job.title]</s></td><td><s>[job.current_positions]</s></td><td><s>[highprior[job]]</s></td></tr>"
 				continue
-
+			if(job.department_prioritized)
+				dat += "<tr class='requested_department'><td><a href='byond://?src=\ref[src];SelectedJob=[job.title]'>[job.title]</a></td><td>[job.current_positions]</td><td>[cgo[job]]</td></tr>"
+				continue
 			dat += "<tr[color ? " class='alt'" : ""]><td><a href='byond://?src=\ref[src];SelectedJob=[job.title]'>[job.title]</a></td><td>[job.current_positions]</td><td>[cgo[job]]</td></tr>"
 			color = !color
 
@@ -654,34 +665,34 @@
 	src << browse(dat, "window=latechoices;size=360x640;can_close=1")
 
 
-/mob/new_player/proc/create_character()
-	spawning = 1
+/mob/new_player/proc/create_human(var/datum/preferences/prefs)
+	spawning = TRUE
 	close_spawn_windows()
 
 	var/mob/living/carbon/human/new_character = new(loc)
-
 	var/datum/species/chosen_species
-	if(client.prefs.species)
-		chosen_species = all_species[client.prefs.species]
-	if(chosen_species)
-		if(is_alien_whitelisted(src, client.prefs.species) || !config.usealienwhitelist || !(chosen_species.flags & WHITELISTED) || (client && client.holder && (client.holder.rights & R_ADMIN)) )// Have to recheck admin due to no usr at roundstart. Latejoins are fine though.
-			new_character.set_species(client.prefs.species)
-			//if(chosen_species.language)
-				//new_character.add_language(chosen_species.language)
+	var/late_join = ticker.current_state == GAME_STATE_PLAYING ? TRUE : FALSE
+
+	if(prefs.species)
+		chosen_species = all_species[prefs.species]
+	if(chosen_species && (check_rights(R_ADMIN, 0) || chosen_species.flags & PLAYABLE || chosen_species.conditional_playable()))
+		new_character.set_species(prefs.species)
+	else if(chosen_species.fallback())
+		to_chat(usr, "Your preferences had a non-playable species, so you were reverted to [chosen_species.fallback()] (default for [chosen_species]).")
+		new_character.set_species(chosen_species.fallback())
 
 	var/datum/language/chosen_language
-	if(client.prefs.language)
-		chosen_language = all_languages["[client.prefs.language]"]
+	if(prefs.language)
+		chosen_language = all_languages["[prefs.language]"]
 	if(chosen_language)
-		if(is_alien_whitelisted(src, client.prefs.language) || !config.usealienwhitelist || !(chosen_language.flags & WHITELISTED) )
-			new_character.add_language("[client.prefs.language]")
+		new_character.add_language("[prefs.language]")
 	if(ticker.random_players || appearance_isbanned(src)) //disabling ident bans for now
 		new_character.setGender(pick(MALE, FEMALE))
-		client.prefs.real_name = random_name(new_character.gender, new_character.species.name)
-		client.prefs.randomize_appearance_for(new_character)
-		client.prefs.flavor_text = ""
+		prefs.real_name = random_name(new_character.gender, new_character.species.name)
+		prefs.randomize_appearance_for(new_character)
+		prefs.flavor_text = ""
 	else
-		client.prefs.copy_to(new_character)
+		prefs.copy_to(new_character)
 
 	src << sound(null, repeat = 0, wait = 0, volume = 85, channel = CHANNEL_LOBBY)// MAD JAMS cant last forever yo
 
@@ -690,50 +701,50 @@
 		mind.active = 0 // we wish to transfer the key manually
 		mind.transfer_to(new_character) // won't transfer key since the mind is not active
 
-	new_character.name = real_name
+	new_character.name = prefs.real_name
 	new_character.dna.ready_dna(new_character)
 
 	if(new_character.mind)
-		new_character.mind.store_memory("<b>Your blood type is:</b> [new_character.dna.b_type]<br>")
+		new_character.mind.store_memory("<b>Your blood type is:</b> [new_character.dna.b_type]<br>", category=MIND_MEMORY_GENERAL, forced=TRUE)
 
-	if(client.prefs.disabilities & DISABILITY_FLAG_NEARSIGHTED)
+	if(prefs.disabilities & DISABILITY_FLAG_NEARSIGHTED)
 		new_character.dna.SetSEState(GLASSESBLOCK,1,1)
 		new_character.disabilities |= NEARSIGHTED
 
-	if(client.prefs.disabilities & DISABILITY_FLAG_VEGAN)
+	if(prefs.disabilities & DISABILITY_FLAG_VEGAN)
 		new_character.dna.SetSEState(VEGANBLOCK, 1, 1)
 
-	if(client.prefs.disabilities & DISABILITY_FLAG_ASTHMA)
+	if(prefs.disabilities & DISABILITY_FLAG_ASTHMA)
 		new_character.dna.SetSEState(ASTHMABLOCK, 1, 1)
 
-	chosen_species = all_species[client.prefs.species]
-	if( (client.prefs.disabilities & DISABILITY_FLAG_FAT) && (chosen_species.anatomy_flags & CAN_BE_FAT) )
+	chosen_species = all_species[prefs.species]
+	if( (prefs.disabilities & DISABILITY_FLAG_FAT) && (chosen_species.anatomy_flags & CAN_BE_FAT) )
 		new_character.mutations += M_FAT
 		new_character.overeatduration = 600
 
-	if(client.prefs.disabilities & DISABILITY_FLAG_EPILEPTIC)
+	if(prefs.disabilities & DISABILITY_FLAG_EPILEPTIC)
 		new_character.dna.SetSEState(EPILEPSYBLOCK,1,1)
 		new_character.disabilities |= EPILEPSY
 
-	if(client.prefs.disabilities & DISABILITY_FLAG_DEAF)
+	if(prefs.disabilities & DISABILITY_FLAG_DEAF)
 		new_character.dna.SetSEState(DEAFBLOCK,1,1)
 		new_character.sdisabilities |= DEAF
 
-	if(client.prefs.disabilities & DISABILITY_FLAG_MUTE)
+	if(prefs.disabilities & DISABILITY_FLAG_MUTE)
 		new_character.dna.SetSEState(MUTEBLOCK,1,1)
 		new_character.sdisabilities |= MUTE
 
-	if(client.prefs.disabilities & DISABILITY_FLAG_LISP)
+	if(prefs.disabilities & DISABILITY_FLAG_LISP)
 		new_character.dna.SetSEState(LISPBLOCK, 1, 1)
 
-	if(client.prefs.disabilities & DISABILITY_FLAG_ANEMIA)
+	if(prefs.disabilities & DISABILITY_FLAG_ANEMIA)
 		new_character.dna.SetSEState(ANEMIABLOCK, 1, 1)
 
 	new_character.dna.UpdateSE()
 	domutcheck(new_character, null, MUTCHK_FORCED)
 
 	var/rank = new_character.mind.assigned_role
-	if(!(ticker.current_state == GAME_STATE_PLAYING))
+	if(!late_join && rank != "MODE")
 		var/obj/S = null
 		// Find a spawn point that wasn't given to anyone
 		for(var/obj/effect/landmark/start/sloc in landmarks_list)
@@ -758,27 +769,26 @@
 			// Use the arrivals shuttle spawn point
 			stack_trace("no spawn points for [rank]")
 			new_character.forceMove(pick(latejoin))
-
-	new_character.key = key		//Manually transfer the key to log them in
+		// 20% chance of getting a dormant bad gene, in which case they also get 10% chance of getting a dormant good gene
+		new_character.DormantGenes(20,10,0,0)
 
 	for(var/datum/religion/R in ticker.religions)
 		if(R.converts_everyone && new_character.mind.assigned_role != "Chaplain")
 			R.convert(new_character,null,TRUE,TRUE)
 			break //Only autoconvert them once, and only if they aren't leading their own faith.
 
+	if(late_join)
+		new_character.key = key
+
 	return new_character
 
-/mob/new_player/proc/create_roundstart_human()
-	var/mob/living/carbon/human/new_character = create_character()
-	qdel(src)
-	new_character.DormantGenes(20,10,0,0) // 20% chance of getting a dormant bad gene, in which case they also get 10% chance of getting a dormant good gene
-
-//Basically, a stripped down version of create_character(). We don't care about DNA, prefs, species, etc. and we skip some rather lengthy setup for each step.
-/mob/new_player/proc/create_roundstart_silicon(var/type)
+//Basically, a stripped down version of create_human(). We don't care about DNA, prefs, species, etc. and we skip some rather lengthy setup for each step.
+/mob/new_player/proc/create_roundstart_silicon(var/datum/preferences/prefs)
+	var/type = mind.assigned_role
 	if(type != "Cyborg" && type != "AI" && type != "Mobile MMI")
 		return
-	//End lobby
-	spawning = 1
+
+	spawning = TRUE
 	close_spawn_windows()
 	src << sound(null, repeat = 0, wait = 0, volume = 85, channel = CHANNEL_LOBBY)
 
@@ -798,17 +808,20 @@
 		message_admins("WARNING! Couldn't find a spawn location for a [type]. They will spawn at the arrival shuttle.")
 
 	//Create the robot and move over prefs
+
 	if(type == "AI")
-		return AIize()
+		var/mob/living/silicon/new_character
+		new_character = AIize()
+		return new_character
 	else
-		forceMove(spawn_loc)
 		var/mob/living/silicon/robot/new_character
-		var/datum/preferences/prefs = client.prefs
+		forceMove(spawn_loc)
 		if(type == "Mobile MMI")
 			new_character = MoMMIfy()
 		else
 			new_character = Robotize()
 		new_character.mmi.create_identity(prefs) //Uses prefs to create a brain mob
+
 		return new_character
 
 /mob/new_player/proc/ViewPrediction()
@@ -829,9 +842,13 @@
 	return 0
 
 
-/mob/new_player/proc/close_spawn_windows()
+/mob/proc/close_spawn_windows()
 	src << browse(null, "window=latechoices") //closes late choices window
 	src << browse(null, "window=playersetup") //closes the player setup window
 
 /mob/new_player/cultify()
 	return
+
+/mob/new_player/say(message, datum/language/speaking, atom/movable/radio, class)
+	if(client)
+		client.ooc(message)

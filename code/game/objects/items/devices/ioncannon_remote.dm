@@ -22,9 +22,9 @@
 /obj/item/device/loic_remote/examine(mob/user)
 	..()
 	if(cooldown-world.time < 0)
-		to_chat(user, "<span class='notice'>It is ready to fire.</span>") 
+		to_chat(user, "<span class='notice'>It is ready to fire.</span>")
 	else
-		to_chat(user, "<span class='notice'>The Low Orbit Ion Cannon can fire again in [altFormatTimeDuration(cooldown-world.time)].</span>") 
+		to_chat(user, "<span class='notice'>The Low Orbit Ion Cannon can fire again in [altFormatTimeDuration(cooldown-world.time)].</span>")
 /obj/item/device/loic_remote/attack_self(var/mob/user)
 	if(cooldown - world.time > 0)
 		to_chat(user, "<span class='notice'>The Low Orbit Ion Cannon is still on cooldown.</span>")
@@ -47,6 +47,8 @@
 
 	message_admins("[key_name_admin(user)] generated an ion law using a LOIC remote.")
 	log_admin("[key_name(user)] generated an ion law using a LOIC remote.")
+	if(recursive_type_check(user,/obj/item/device/roganbot/killbot))
+		playsound(user.loc,'sound/effects/2003M/Ion_cannon_activated.ogg',100)
 
 	for (var/obj/machinery/computer/communications/C in machines)
 		if(! (C.stat & (FORCEDISABLE|BROKEN|NOPOWER) ) )
@@ -57,7 +59,7 @@
 			C.messagetitle.Add("[command_name()] Update")
 			C.messagetext.Add(P.info)
 
-	
+
 
 
 

@@ -7,6 +7,7 @@
 	var/atom/target // /vg/ edit:  Removed type specification so spiders can target doors.
 	var/attack_same = 0 //Set us to 1 to allow us to attack our own faction, or 2, to only ever attack our own faction
 	var/ranged = 0
+	var/doubleshot = 0
 	var/rapid = 0
 	var/projectiletype
 	var/projectilesound
@@ -35,15 +36,18 @@
 	var/list/target_rules = list()
 
 	var/can_ventcrawl = FALSE // If the mob can ventcrawl
+	var/mob/living/simple_animal/hostile/asteroid/hivelord/hivelord = null
 
 /mob/living/simple_animal/hostile/New()
 	..()
 	initialize_rules()
 
 /mob/living/simple_animal/hostile/Destroy()
-	for(var/datum/fuzzy_ruling/D in target_rules)
-		qdel(D)
-	target_rules = null
+	QDEL_LIST_NULL(target_rules)
+	if(hivelord)
+		if(src in hivelord.broods)
+			hivelord.broods.Remove(src)
+		hivelord = null
 	..()
 
 /mob/living/simple_animal/hostile/proc/initialize_rules()
@@ -146,6 +150,8 @@
 	var/list/Targets = list()
 	var/Target
 	for(var/atom/A in ListTargets())
+		if (!isValidTarget(A))
+			break
 		if(Found(A))//Just in case people want to override targetting
 			var/list/FoundTarget = list()
 			FoundTarget += A
@@ -160,6 +166,9 @@
 
 /mob/living/simple_animal/hostile/proc/Found(var/atom/A)//This is here as a potential override to pick a specific target if available
 	return
+
+/mob/living/simple_animal/hostile/proc/isValidTarget(var/atom/A)//we should have made that proc long ago instead of expanding CanAttack()
+	return TRUE
 
 /mob/living/simple_animal/hostile/proc/PickTarget(var/list/Targets)//Step 3, pick amongst the possible, attackable targets
 	if(target != null)//If we already have a target, but are told to pick again, calculate the lowest distance between all possible, and pick from the lowest distance targets
@@ -247,7 +256,7 @@
 		if(environment_smash_flags & OPEN_DOOR_SMART)
 			var/turf/T = get_step(src,target)
 			for(var/obj/machinery/door/airlock/AL in T)
-				attack_animal(src)
+				AL.attack_animal(src)
 				delayNextAttack(1 SECONDS)
 		else
 			hostile_interest--
@@ -269,6 +278,7 @@
 				AttackingTarget()
 			if(canmove && space_check())
 				if(retreat_distance != null && target_distance <= retreat_distance) //If we have a retreat distance, check if we need to run from our target
+					before_retreat()
 					walk_away(src,target,retreat_distance,move_to_delay)
 				else
 					Goto(target,move_to_delay,minimum_distance)//Otherwise, get to our minimum distance so we chase them
@@ -350,6 +360,10 @@
 /mob/living/simple_animal/hostile/death(var/gibbed = FALSE)
 	LoseAggro()
 	walk(src, 0)
+	if(hivelord)
+		if(src in hivelord.broods)
+			hivelord.broods.Remove(src)
+		hivelord = null
 	..(gibbed)
 
 /mob/living/simple_animal/hostile/inherit_mind(mob/living/simple_animal/from)
@@ -358,13 +372,12 @@
 	var/mob/living/simple_animal/hostile/H = from
 	if(istype(H))
 		for (var/datum/weakref/ref in H.friends)
-			var/not_a_friend_yet = TRUE
+			var/already_friend = FALSE
 			var/mob/M = ref.get()
-			for (var/datum/weakref/reff in H.friends)
+			for (var/datum/weakref/reff in friends)
 				if (M == reff.get())
-					not_a_friend_yet = FALSE
-					break
-			if (not_a_friend_yet)
+					already_friend = TRUE
+			if (!already_friend)
 				friends += makeweakref(M)
 
 /mob/living/simple_animal/hostile/proc/OpenFire(var/atom/ttarget)
@@ -375,6 +388,11 @@
 		spawn()
 			TryToShoot(target_turf, ttarget)
 			sleep(1)
+			TryToShoot(target_turf, ttarget)
+			sleep(1)
+			TryToShoot(target_turf, ttarget)
+	if(doubleshot)
+		spawn()
 			TryToShoot(target_turf, ttarget)
 			sleep(1)
 			TryToShoot(target_turf, ttarget)
@@ -470,6 +488,7 @@
 					 /obj/structure/grille,
 					 /obj/structure/girder,
 					 /obj/structure/rack,
+					 /obj/structure/railing,
 					 /obj/machinery/door/window,
 					 /obj/item/tape,
 					 /obj/item/toy/balloon/inflated/decoy,
@@ -503,6 +522,9 @@
 		return 1
 	else
 		return 0
+
+//What to do immediately after deciding to retreat but before the walk action starts
+/mob/living/simple_animal/hostile/proc/before_retreat()
 
 //Let players use mobs' ranged attacks
 /mob/living/simple_animal/hostile/Stat()

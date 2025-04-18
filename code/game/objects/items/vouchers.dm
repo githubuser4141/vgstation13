@@ -4,8 +4,11 @@
 	icon = 'icons/obj/vouchers.dmi'
 	icon_state = "voucher"
 	w_class = W_CLASS_TINY
+	w_type = RECYK_WOOD
+	flammable = TRUE
 	force = 0
 	throwforce = 0
+
 
 	var/shred_on_use = 1
 
@@ -44,7 +47,7 @@
 
 /obj/item/voucher/warp/kinetic_accelerator/vouch_condition()
 	var/turf/T = get_turf(src)
-	if(istype(T.loc, /area/mine/explored)||istype(T.loc, /area/mine/unexplored))
+	if(istype(T.loc, /area/mine/explored)||istype(T.loc, /area/mine/unexplored)||istype(T.loc, /area/surface/mine))
 		return TRUE
 	return FALSE
 
@@ -91,7 +94,7 @@
 
 /obj/item/voucher/free_item/glowing //This one gives you special voucher-only items!
 	name = "glowing voucher"
-	desc = "Don't bother appealing to a Vendomat without this!"
+	desc = "Don't bother appealing to a StockPro without this!"
 	icon_state = "glowingvoucher"
 	freebies = list(
 		/obj/item/weapon/glowstick,
@@ -149,4 +152,4 @@
 	vend_amount = 1
 	single_items = 1
 	shred_on_use = 1
-  
+

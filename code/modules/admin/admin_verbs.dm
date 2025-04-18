@@ -33,7 +33,6 @@ var/list/admin_verbs_admin = list(
 	/datum/admins/proc/view_txt_log,	/*shows the server log (diary) for today*/
 	/datum/admins/proc/view_atk_log,	/*shows the server combat-log, doesn't do anything presently*/
 	/client/proc/cmd_admin_pm_context,	/*right-click adminPM interface*/
-	/client/proc/cmd_admin_pm_context_special, /*Currently only for blobs*/
 	/client/proc/cmd_admin_pm_panel,	/*admin-pm list*/
 	/client/proc/cmd_admin_subtle_message,	/*send an message to somebody as a 'voice in their head'*/
 	/client/proc/cmd_admin_delete,		/*delete an instance/object/mob/etc*/
@@ -89,7 +88,8 @@ var/list/admin_verbs_admin = list(
 	/client/proc/artifacts_panel,
 	/client/proc/body_archive_panel,
 	/client/proc/climate_panel,
-	/datum/admins/proc/ashInvokedEmotions	/*Ashes all paper from the invoke emotion spell. An emergency purge.*/
+	/datum/admins/proc/ashInvokedEmotions,	/*Ashes all paper from the invoke emotion spell. An emergency purge.*/
+	/client/proc/toggle_admin_examine
 )
 var/list/admin_verbs_ban = list(
 	/client/proc/unban_panel,
@@ -132,6 +132,7 @@ var/list/admin_verbs_fun = list(
 	/client/proc/view_all_rods,
 	/client/proc/add_centcomm_order,
 	/client/proc/apes,
+	/client/proc/force_next_map,
 	)
 var/list/admin_verbs_spawn = list(
 	/datum/admins/proc/spawn_atom, // Allows us to spawn instances
@@ -162,6 +163,7 @@ var/list/admin_verbs_server = list(
 	/client/proc/dump_chemreactions,
 	/client/proc/save_coordinates,
 	/datum/admins/proc/mass_delete_in_zone,
+	/client/proc/hub_panel,
 	)
 var/list/admin_verbs_debug = list(
 	/client/proc/gc_dump_hdl,
@@ -185,11 +187,13 @@ var/list/admin_verbs_debug = list(
 	/client/proc/test_movable_UI,
 	/client/proc/test_snap_UI,
 	/client/proc/configFood,
+	///client/proc/configThermDiss,
 	/client/proc/configHat,
 	/client/proc/cmd_dectalk,
 	/client/proc/debug_reagents,
 	/client/proc/create_awaymission,
 	/client/proc/make_invulnerable,
+	/client/proc/send_to_heck,
 	/client/proc/cmd_admin_dump_delprofile,
 	/client/proc/mob_list,
 	/client/proc/cure_disease,
@@ -208,15 +212,18 @@ var/list/admin_verbs_debug = list(
 	/client/proc/bee_count,
 	/client/proc/set_procizine_call,
 	/client/proc/set_procizine_properties,
+	/client/proc/check_for_unconnected_atmos,
+
 #if UNIT_TESTS_ENABLED
 	/client/proc/unit_test_panel,
 #endif
 	/client/proc/update_all_open_spaces,
 	/client/proc/update_all_area_portals,
+	/client/proc/spam_blend_calls,
+	/client/proc/edit_motd,
 	)
 var/list/admin_verbs_possess = list(
-	/proc/possess,
-	/proc/release
+	/client/proc/possess
 	)
 var/list/admin_verbs_permissions = list(
 	/client/proc/edit_admin_permissions
@@ -287,14 +294,12 @@ var/list/admin_verbs_hideable = list(
 	/client/proc/cmd_debug_tog_aliens,
 	/client/proc/enable_debug_verbs,
 	/client/proc/mob_list,
-	/proc/possess,
-	/proc/release,
+	/client/proc/possess,
 	/client/proc/gc_dump_hdl,
 	/client/proc/create_map_element
 	)
 var/list/admin_verbs_mod = list(
 	/client/proc/cmd_admin_pm_context,	/*right-click adminPM interface*/
-	/client/proc/cmd_admin_pm_context_special,
 	/client/proc/cmd_admin_pm_panel,	/*admin-pm list*/
 	/client/proc/debug_variables,		/*allows us to -see- the variables of any instance in the game.*/
 	/datum/admins/proc/PlayerNotes,
@@ -352,6 +357,7 @@ var/list/admin_verbs_mod = list(
 		admin_verbs_debug,
 		admin_verbs_possess,
 		admin_verbs_permissions,
+		admin_verbs_polling,
 		/client/proc/stealth,
 		admin_verbs_rejuv,
 		admin_verbs_sounds,
@@ -360,7 +366,6 @@ var/list/admin_verbs_mod = list(
 		/*Debug verbs added by "show debug verbs"*/
 		/client/proc/Cell,
 		/client/proc/pdiff,
-		/client/proc/do_not_use_these,
 		/client/proc/camera_view,
 		/client/proc/sec_camera_report,
 		/client/proc/intercom_view,
@@ -377,7 +382,7 @@ var/list/admin_verbs_mod = list(
 		/client/proc/splash,
 		/client/proc/cmd_admin_areatest,
 		/client/proc/readmin,
-		/proc/generateMiniMaps,
+		///proc/generateMiniMaps,
 		/client/proc/maprender,
 		/client/proc/cmd_admin_rejuvenate,
 		/datum/admins/proc/show_role_panel,
@@ -661,6 +666,16 @@ var/list/admin_verbs_mod = list(
 			var/heavy_impact_range = input("Heavy impact range (in tiles):") as num
 			var/light_impact_range = input("Light impact range (in tiles):") as num
 			var/flash_range = input("Flash range (in tiles):") as num
+			if(devastation_range > 299 || heavy_impact_range > 299 || light_impact_range > 299)
+				if(alert(usr, "THIS EXPLOSION MAY CRASH THE SERVER, ARE YOU REALLY SURE?", "DANGER ZONE", "Yes", "No") == "No")
+					return 0;
+				log_admin("[key_name_admin(src)] decided to set off a potentially server-crashing bomb despite the warning.")
+				message_admins("<span class='warning'>[key_name_admin(src)] decided to set off a potentially server-crashing bomb despite the warning.</span>")
+			else if (devastation_range > 149 || heavy_impact_range > 149 || light_impact_range > 149)
+				if(alert(usr, "This explosion is likely to cause significant server lag, continue anyway?", "Lag Warning", "Yes", "No") == "No")
+					return 0;
+				log_admin("[key_name_admin(src)] decided to set off a potentially server-lagging bomb despite the warning.")
+				message_admins("<span class='warning'>[key_name_admin(src)] decided to set off a potentially server-lagging bomb despite the warning.</span>")
 			explosion(epicenter, devastation_range, heavy_impact_range, light_impact_range, flash_range, whodunnit = usr)
 
 	log_admin("[key_name(usr)] creating an admin explosion at [epicenter.loc] ([epicenter.x],[epicenter.y],[epicenter.z]).")
@@ -801,6 +816,14 @@ var/list/admin_verbs_mod = list(
 		else
 			config.log_hrefs = 1
 			to_chat(src, "<b>Started logging hrefs</b>")
+
+/client/proc/hub_panel()
+	set name = "Hub Panel"
+	set category = "Server"
+	if(holder)
+		holder.HubPanel()
+	feedback_add_details("admin_verb","HP") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
+	return
 
 /client/proc/check_ai_laws()
 	set name = "Check AI Laws"
@@ -1130,6 +1153,7 @@ var/list/admin_verbs_mod = list(
 	ML_INPUT_COORDS,
 	ML_LOAD_TO_Z2
 	)
+	var/dungeoning = FALSE
 
 	switch(input(usr, "Select a location for the new map element", "Map element loading") as null|anything in choices)
 		if(ML_CURRENT_LOC)
@@ -1162,28 +1186,48 @@ var/list/admin_verbs_mod = list(
 				to_chat(src, "<span class='warning'>Dungeon area not defined! This map is missing the /obj/effect/landmark/dungeon_area object.</span>")
 				return
 
-			var/rotate = input(usr, "Set the rotation offset: (0, 90, 180 or 270) ", "Map element loading", "0") as null|num
-			if(rotate == null)
-				return
-
-			var/rotatetext = rotate ? " rotated by [rotate] degrees" : ""
-			log_admin("[key_name(src)] is loading [ME.file_path] at z-level 2 (location chosen automatically)[rotatetext].")
-			message_admins("[key_name_admin(src)] is loading [ME.file_path] at z-level 2 (location chosen automatically)[rotatetext].")
-			load_dungeon(ME, rotate, TRUE)
-			message_admins("[ME.file_path] loaded at [ME.location ? formatJumpTo(ME.location) : "[x_coord], [y_coord], [z_coord]"][rotatetext].")
-			return
-
+			dungeoning = TRUE
 
 	var/rotate = input(usr, "Set the rotation offset: (0, 90, 180 or 270) ", "Map element loading", "0") as null|num
 	if(rotate == null)
 		return
-	var/overwrite = alert("Overwrite original objects in area?","Map element loading","Yes","No") == "Yes"
+	var/overwrite = FALSE
+	if(!dungeoning)
+		overwrite = alert("Overwrite original objects in area?","Map element loading","Yes","No") == "Yes"
+	var/clipmin_x = 0
+	var/clipmax_x = INFINITY
+	var/clipmin_y = 0
+	var/clipmax_y = INFINITY
+	var/clipmin_z = 0
+	var/clipmax_z = INFINITY
+	if(alert("Clip map to bounds?","Map element loading","Yes","No") == "Yes")
+		clipmin_x = input(usr, "Minimum X to clip at", "Map element loading", "1") as null|num
+		if(clipmin_x == null)
+			return
+		clipmax_x = input(usr, "Maximum X to clip at", "Map element loading", "[world.maxx]") as null|num
+		if(clipmax_x == null)
+			return
+		clipmin_y = input(usr, "Minimum Y to clip at", "Map element loading", "1") as null|num
+		if(clipmin_y == null)
+			return
+		clipmax_y = input(usr, "Maximum Y to clip at", "Map element loading", "[world.maxy]") as null|num
+		if(clipmax_y == null)
+			return
+		clipmin_z = input(usr, "Minimum Z to clip at", "Map element loading", "1") as null|num
+		if(clipmin_z == null)
+			return
+		clipmax_z = input(usr, "Maximum Z to clip at", "Map element loading", "[world.maxz]") as null|num
+		if(clipmax_z == null)
+			return
 
 	var/rotatetext = rotate ? " rotated by [rotate] degrees" : ""
 	log_admin("[key_name(src)] is loading [ME.file_path] at [x_coord], [y_coord], [z_coord][rotatetext].")
 	message_admins("[key_name_admin(src)] is loading [ME.file_path] at [x_coord], [y_coord], [z_coord][rotatetext].")
-	//Reduce X and Y by 1 because these arguments are actually offsets, and they're added to 1;1 in the map loader. Without this, spawning something at 1;1 would result in it getting spawned at 2;2
-	ME.load(x_coord - 1, y_coord - 1, z_coord, rotate, overwrite, TRUE)
+	if(dungeoning)
+		load_dungeon(ME, rotate, TRUE, clipmin_x, clipmax_x, clipmin_y, clipmax_y, clipmin_z, clipmax_z)
+	else
+		//Reduce X and Y by 1 because these arguments are actually offsets, and they're added to 1;1 in the map loader. Without this, spawning something at 1;1 would result in it getting spawned at 2;2
+		ME.load(x_coord - 1, y_coord - 1, z_coord, rotate, overwrite, TRUE, clipmin_x, clipmax_x, clipmin_y, clipmax_y, clipmin_z, clipmax_z)
 	message_admins("[ME.file_path] loaded at [ME.location ? formatJumpTo(ME.location) : "[x_coord], [y_coord], [z_coord]"][rotatetext].")
 
 /client/proc/create_awaymission()
@@ -1232,6 +1276,57 @@ var/list/admin_verbs_mod = list(
 	to_chat(src, "Attempting to load [AM.name] ([AM.file_path])...")
 	createRandomZlevel(override, AM, usr)
 	to_chat(src, "The away mission has been generated on z-level [world.maxz] [AM.location ? "([formatJumpTo(AM.location)])" : ""]")
+
+/client/proc/send_to_heck(var/mob/dead/observer/O in dead_mob_list)
+	set name = "Send to hell"
+	set desc = "Eternally damn this ghost for their sins."
+	set category = "Fun"
+
+	if(alert(usr, "Are you sure you want to do this?", "Confirm judgement", "Yes", "No") != "Yes")
+		return
+
+	var/mob/newmob = send_to_hedoublehockeysticks(O)
+	if(newmob)
+		log_admin("[ckey(key)]/([mob]) has damned [newmob] to HELL")
+		message_admins("[ckey(key)]/([mob]) has damned [newmob] [formatJumpTo(newmob,"(JMP)")] to HELL")
+
+/proc/send_to_hedoublehockeysticks(mob/O)
+	if(!O || !O.key)
+		return
+	if(!(/datum/map_element/dungeon/hell in existing_dungeons))
+		load_dungeon(/datum/map_element/dungeon/hell)
+	var/datum/map_element/dungeon/hell/H = locate(/datum/map_element/dungeon/hell) in existing_dungeons
+	var/list/turf/turfs = list()
+	for(var/turf/T in H.spawned_atoms)
+		if(!T.density)
+			turfs += T
+	if(!turfs.len)
+		warning("No hell turfs to send a mob to!")
+		return
+	for(var/datum/body_archive/archive in body_archives)
+		if(archive.key == O.key)
+			var/mob/living/tempM = new archive.mob_type
+			if(!istype(tempM))
+				warning("Body archive to send to hell was not a living mob!")
+				break
+			var/mob/living/M = tempM.actually_reset_body(archive = archive, our_mind = get_mind_by_key(O.key))
+			if(!istype(M))
+				warning("Body archive to send to hell was not a living mob!")
+				break
+			M.status_flags ^= BUDDHAMODE
+			M.forceMove(pick(turfs))
+			qdel(tempM)
+			qdel(O)
+			return M
+
+	var/datum/mind/mind = get_mind_by_key(O.key)
+	if (mind)
+		var/mob/living/carbon/human/prefM = new(pick(turfs))
+		prefM.status_flags ^= BUDDHAMODE
+		prefM.quick_copy_prefs()
+		mind.transfer_to(prefM)
+		qdel(O)
+		return prefM
 
 /client/proc/cmd_dectalk()
 	set name = "Dectalk"
@@ -1289,4 +1384,14 @@ var/list/admin_verbs_mod = list(
 	if(holder)
 		holder.ViewAllRods()
 	feedback_add_details("admin_verb","V-ROD") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
+	return
+
+/client/proc/toggle_admin_examine()
+	set name = "Toggle Admin-only Descriptions"
+	set category = "Admin"
+	set desc = "See admin-only text for certain objects."
+	if(holder)
+		holder.admin_examine = !(holder.admin_examine)
+		to_chat(usr, "<span class='notice'>You toggle [holder.admin_examine ? "on" : "off"] admin examining.")
+	feedback_add_details("admin_verb","admin_examine")
 	return

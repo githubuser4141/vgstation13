@@ -11,7 +11,7 @@
 
 #if ASTAR_DEBUG == 1
 #define log_astar_bot(text) visible_message("[src] : [text]")
-#define log_astar_beacon(text) to_chat(world, "[src] : [text]")
+#define log_astar_beacon(text) //to_chat(world, "[src] : [text]")
 #define log_astar_command(text) to_chat(world, "[src] : [text]")
 #else
 #define log_astar_bot(text)
@@ -26,6 +26,7 @@
 	luminosity = 3
 	use_power = MACHINE_POWER_USE_NONE
 	pAImovement_delay = 1
+	machine_flags = EMAGGABLE
 	var/icon_initial //To get around all that pesky hardcoding of icon states, don't put modifiers on this one
 	var/obj/item/weapon/card/id/botcard			// the ID card that the bot "holds"
 	var/mob/living/simple_animal/hostile/pulse_demon/PD_occupant // for when they take over them
@@ -74,7 +75,7 @@
 
 	var/summoned = FALSE // Were they summoned?
 
-	var/commanding_radio = /obj/item/radio/integrated/signal/bot
+	var/commanding_radios = list(/obj/item/radio/integrated/signal/bot)
 
 	// Queue of directions. Just like shift-clicking on age of empires 2. It'll go to the next direction after it's finished with this one
 	// It's a list of lists. These lists are coordinates
@@ -98,8 +99,7 @@
 /obj/machinery/bot/Destroy()
 	. = ..()
 	if(botcard)
-		qdel(botcard)
-		botcard = null
+		QDEL_NULL(botcard)
 	if (waiting_for_patrol || waiting_for_path)
 		for (var/datum/path_maker/PM in pathmakers)
 			if (PM.owner == src)
@@ -172,8 +172,8 @@
 
 /obj/machinery/bot/proc/decay_oldtargets()
 	for(var/i in old_targets)
-		log_astar_bot("[i] [old_targets[i]]")
-		if(--old_targets[i] == 0)
+		log_astar_bot("old target: [i] [old_targets[i]]")
+		if(--old_targets[i] <= 0)
 			remove_oldtarget(i)
 
 // Can we move to the next tile or not ?
@@ -210,7 +210,7 @@
 		if(target)
 			if (waiting_for_path)
 				return 1
-			calc_path(target, new /callback(src, .proc/get_path))
+			calc_path(target, new /callback(src, nameof(src::get_path())))
 			if (path && length(path))
 				process_path()
 			return 1
@@ -250,7 +250,7 @@
 	if(frustration > 5)
 		summoned = FALSE // Let's not try again.
 		if (target && !target.gcDestroyed)
-			calc_path(target, new /callback(src, .proc/get_path), next)
+			calc_path(target, new /callback(src, nameof(src::get_path())), next)
 		else
 			target = null
 			path = list()
@@ -331,7 +331,7 @@
 
 	if(patrol_target)
 		waiting_for_patrol = TRUE
-		calc_patrol_path(patrol_target, new /callback(src, .proc/get_patrol_path))
+		calc_patrol_path(patrol_target, new /callback(src, nameof(src::get_patrol_path())))
 // This proc send out a singal to every beacon listening to the "beacon_freq" variable.
 // The signal says, "i'm a bot looking for a beacon to patrol to."
 // Every beacon with the flag "patrol" responds by trasmitting its location.
@@ -364,10 +364,11 @@
 // However, it just says, "i'm a bot looking for a beacon named [new_dest]"
 // Only [new_dest], if it exist, replies with its location.
 /obj/machinery/bot/proc/set_destination(var/new_dest)
-	log_astar_beacon("new_destination [new_dest]")
-	new_destination = new_dest
-	post_signal(beacon_freq, "findbeacon", "patrol")
-	awaiting_beacon = 1
+	if (new_dest)
+		log_astar_beacon("new_destination [new_dest]")
+		new_destination = new_dest
+		post_signal(beacon_freq, "findbeacon", "patrol")
+		awaiting_beacon = 1
 
 // Proc called when we reached our patrol destination.
 // Normal behaviour is to null the current target and find a new one.
@@ -393,7 +394,7 @@
 			return TRUE
 	if(frustration > 5)
 		if (target && !target.gcDestroyed)
-			calc_path(target, new /callback(src, .proc/get_path), next)
+			calc_path(target, new /callback(src, nameof(src::get_path())), next)
 		else
 			target = null
 			patrol_path = list()
@@ -422,14 +423,14 @@
 	else
 		frequency.post_signal(src, signal)
 
-// Checks if the bot can recieve the signal or not.
+// Checks if the bot can receive the signal or not.
 /obj/machinery/bot/proc/is_valid_signal(var/datum/signal/signal)
 	return signal.data["command"] || signal.data["patrol"] // Most bots wait for a patrol signal
 
 // This proc is called when we get a singal from beacons.
 // Either we are looking for the nearest beacon, and in this case we compare each signal we get to get the closest one.
-// Or we are looking for one beacon in particular, and will only set our target if what we recieve is the new destination we are supposed to go to.
-// After recieving a valid signal, we'll set it as our CURRENT destination.
+// Or we are looking for one beacon in particular, and will only set our target if what we receive is the new destination we are supposed to go to.
+// After receiving a valid signal, we'll set it as our CURRENT destination.
 /obj/machinery/bot/receive_signal(var/datum/signal/signal)
 	var/valid = is_valid_signal(signal)
 	if(!valid)
@@ -438,9 +439,9 @@
 	// -- Patrol signal --
 	var/recv = signal.data["beacon"]
 	if (recv)
-		log_astar_beacon("recieved patrol signal : [recv]")
+		log_astar_beacon("received patrol signal : [recv]")
 		if(recv == new_destination)	// if the recvd beacon location matches the set destination, then we will navigate there
-			handle_recieved_destination(signal, recv)
+			handle_received_destination(signal, recv)
 			return 1
 		// if looking for nearest beacon
 		if(new_destination == "__nearest__")
@@ -461,25 +462,25 @@
 	// -- Command signals --
 	var/target_bot = signal.data["target"]
 	var/command = signal.data["command"]
-	log_astar_command("recieved signal [command] for [target_bot]")
+	log_astar_command("received signal [command] for [target_bot]")
 	if (target_bot != "\ref[src]")
 		return
 	execute_signal_command(signal, command)
 
 // -- We got a new destination, how do we go there?
 // Most bots will patrol to the target.
-/obj/machinery/bot/proc/handle_recieved_destination(var/datum/signal/signal, var/recv)
+/obj/machinery/bot/proc/handle_received_destination(var/datum/signal/signal, var/recv)
 	log_astar_beacon("[src] : new destination chosen, [recv]")
 	destination = new_destination
 	patrol_target = signal.source.loc
 	next_destination = signal.data["next_patrol"]
 	awaiting_beacon = 0
 
-// -- Recieved an order via signal. This proc assumes the bot is the correct one to get the command.
+// -- Received an order via signal. This proc assumes the bot is the correct one to get the command.
 /obj/machinery/bot/proc/execute_signal_command(var/datum/signal/signal, var/command)
 	log_astar_command("recieved command [command]")
-	if (!istype(signal.source, commanding_radio))
-		log_astar_command("refused command [command], wrong radio type")
+	if (!is_type_in_list(signal.source, commanding_radios))
+		log_astar_command("refused command [command], wrong radio type. Expected [english_list(commanding_radios, and_text = " or ")] got [signal.source.type]")
 		return TRUE
 	switch (command)
 		if ("auto_patrol")
@@ -496,6 +497,7 @@
 				target = get_turf(signal.source)
 			path = list()
 			patrol_path = list()
+			destinations_queue = list()
 			return 1
 		if ("switch_power")
 			if (on)
@@ -514,13 +516,19 @@
 	destination = place_to_go
 
 /datum/bot/order/mule
-	var/atom/thing_to_load
+	var/atom/thing_to_load = null
 	var/unload_here = FALSE
+	var/unload_dir = 0
+	var/loc_description = ""
+	var/returning = FALSE
 
-/datum/bot/order/mule/New(var/turf/place_to_go, var/atom/thing, _unload_here = FALSE)
+/datum/bot/order/mule/New(var/turf/place_to_go, var/atom/thing = null, _unload_here = FALSE, var/unload_direction = 0, var/text_desc = "Unknown")
 	destination = place_to_go
 	thing_to_load = thing
 	unload_here = _unload_here
+	unload_dir = unload_direction
+	loc_description = text_desc
+	astar_debug_mulebots("Order up! [destination] [loc_description] [thing_to_load] [unload_here] [unload_dir]!")
 
 /datum/bot/order/mule/unload
 
@@ -548,7 +556,7 @@
 /obj/machinery/bot/proc/calc_path(var/target, var/callback, var/turf/avoid = null)
 	ASSERT(target && callback)
 	var/cardinal_proc = bot_flags & BOT_SPACEWORTHY ? /turf/proc/AdjacentTurfsSpace : /turf/proc/CardinalTurfsWithAccess
-	if ((get_dist(src, target) < 13) && !(bot_flags & BOT_NOT_CHASING)) // For beepers and ED209
+	if (((get_dist(src, target) < 13) && !(bot_flags & BOT_NOT_CHASING)) || (get_dist(src, target) < 6)) // For beepers and ED209
 		// IMPORTANT: Quick AStar only takes TURFS as arguments.
 		log_astar_bot("quick astar path calculation...")
 		path = quick_AStar(src.loc, get_turf(target), cardinal_proc, /turf/proc/Distance_cardinal, 0, max(10,get_dist(src,target)*3), id=botcard, exclude=avoid, reference="\ref[src]")
@@ -614,12 +622,14 @@
 		src.explode()
 
 /obj/machinery/bot/emag_act(mob/user)
+	if(emagged >= 2)
+		return
 	if(locked)
 		locked = 0
 		emagged = 1
 		if(user)
 			to_chat(user, "<span class='warning'>You remove [src]'s control restrictions. Opening up its maintenance panel and swiping again will cause [src] to malfunction.</span>")
-	if(!locked && open)
+	else if(open)
 		emagged = 2
 		if(user)
 			to_chat(user, "<span class='warning'>You cause a malfunction in [src]'s behavioral matrix.</span>")
@@ -708,8 +718,6 @@
 				to_chat(user, "<span class='notice'>Unable to repair with the maintenance panel closed.</span>")
 		else
 			to_chat(user, "<span class='notice'>[src] does not need a repair.</span>")
-	else if (istype(W, /obj/item/weapon/card/emag) && emagged < 2)
-		emag_act(user)
 	else
 		if(isobj(W))
 			W.on_attack(src, user)

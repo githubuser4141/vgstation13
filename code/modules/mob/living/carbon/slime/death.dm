@@ -1,11 +1,11 @@
 /mob/living/carbon/slime/death(gibbed)
-	if(stat == DEAD)
+	if((status_flags & BUDDHAMODE) || stat == DEAD)
 		return
 	stat = DEAD
 	icon_state = "[colour] baby slime dead"
 
 	if(!gibbed)
-		if(istype(src, /mob/living/carbon/slime/adult))
+		if(slime_lifestage == SLIME_ADULT)
 			//ghostize() - Messes up making momma slime a baby
 			var/mob/living/carbon/slime/M1 = new primarytype(loc)
 			if(src.mind)

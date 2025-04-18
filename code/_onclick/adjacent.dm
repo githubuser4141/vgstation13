@@ -37,7 +37,7 @@
 		if(T0 == src) //same turf
 			return 1
 
-		if(get_dist(src, T0) > 1) //too far
+		if(get_z_dist(src, T0) > 1 || (src.z != T0.z && !(locate(/obj/structure/stairs) in src) && !(locate(/obj/structure/stairs) in T0))) //too far
 			continue
 
 		// Non diagonal case
@@ -92,11 +92,19 @@
 /obj/item/Adjacent(var/atom/neighbor, var/recurse = 1)
 	if(neighbor == loc)
 		return 1
+	if(battlemat_exception(neighbor))
+		return 1
 	if(istype(loc,/obj/item))
 		if(recurse > 0)
 			return loc.Adjacent(neighbor,recurse - 1)
 		return 0
 	return ..()
+
+/obj/item/proc/battlemat_exception(atom/neighbor)
+	var/obj/item/battlemat/BM = locate(/obj/item/battlemat) in loc
+	if(neighbor && BM && neighbor.Adjacent(BM)) //Allow grabbing something on a battlemat as long as we're adjacent to it
+		return 1
+	return 0
 /*
 	Special case: This allows you to reach a door when it is visally on top of,
 	but technically behind, a fire door

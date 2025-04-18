@@ -47,6 +47,9 @@
 	setDensity(FALSE)
 	..()
 
+/obj/machinery/door/window/update_icon()
+	return
+
 /obj/machinery/door/window/proc/smart_toggle() //For "smart" windows
 	// var/color = window_is_opaque ? "#FFFFFF" : "#222222" //these are backwards because we're changing window_is_opaque later
 	// animate(src, color=color, time=5)
@@ -72,19 +75,20 @@
 		to_chat(user, "It is a secure windoor. It's stronger and closes more quickly.")
 
 /obj/machinery/door/window/Bumped(atom/movable/AM)
+	var/sleeptime = normalspeed ? 50 : 20 // secure doors close faster
 	if(!ismob(AM))
 		var/obj/machinery/bot/bot = AM
 		if(istype(bot))
 			if(density && check_access(bot.botcard))
 				open()
-				sleep(50)
+				sleep(sleeptime)
 				close()
 		else if(istype(AM, /obj/mecha))
 			var/obj/mecha/mecha = AM
 			if(density)
 				if(mecha.occupant && allowed(mecha.occupant))
 					open()
-					sleep(50)
+					sleep(sleeptime)
 					close()
 		else if(istype(AM, /obj/structure/bed/chair/vehicle))
 			var/obj/structure/bed/chair/vehicle/vehicle = AM
@@ -93,8 +97,8 @@
 					if(istype(vehicle, /obj/structure/bed/chair/vehicle/firebird))
 						vehicle.forceMove(get_step(vehicle,vehicle.dir))//Firebird doesn't wait for no slowpoke door to fully open before dashing through!
 					open()
-					sleep(50)
-					close()
+					spawn(sleeptime)
+						close()
 				else if(!operating)
 					denied()
 		return
@@ -104,12 +108,8 @@
 		return
 	if(density && allowed(AM))
 		open()
-		// What.
-		if(check_access(null))
-			sleep(50)
-		else //secure doors close faster
-			sleep(20)
-		close()
+		spawn(sleeptime)
+			close()
 
 /obj/machinery/door/window/Cross(atom/movable/mover, turf/target, height=1.5, air_group = 0)
 	if(istype(mover) && mover.checkpass(pass_flags_self))
@@ -218,7 +218,7 @@
 		..()
 
 /obj/machinery/door/window/attack_paw(mob/living/user)
-	if(istype(user, /mob/living/carbon/alien/humanoid) || istype(user, /mob/living/carbon/slime/adult))
+	if(istype(user, /mob/living/carbon/alien/humanoid) || isslimeadult(user))
 		if(operating)
 			return
 		user.delayNextAttack(8)
@@ -250,8 +250,7 @@
 			to_chat(user, "<span class='notice'>You removed \the [electronics.name]!</span>")
 			make_assembly()
 			if(smartwindow)
-				qdel(smartwindow)
-				smartwindow = null
+				QDEL_NULL(smartwindow)
 				if(window_is_opaque)
 					window_is_opaque = !window_is_opaque
 					smart_toggle()
@@ -385,6 +384,7 @@
 	health = 100
 	assembly_type = /obj/structure/windoor_assembly/secure
 	penetration_dampening = 4
+	normalspeed = 0
 
 /obj/machinery/door/window/plasma
 	name = "plasma window door"
@@ -403,6 +403,7 @@
 	secure = TRUE
 	assembly_type = /obj/structure/windoor_assembly/plasma
 	penetration_dampening = 8
+	normalspeed = 0
 
 // Used on Packed ; smartglassified roundstart
 // TODO: Remove this snowflake stuff.

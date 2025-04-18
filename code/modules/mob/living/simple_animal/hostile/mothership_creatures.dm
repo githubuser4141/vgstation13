@@ -7,12 +7,12 @@
 ///////////////////////////////////////////////////////////////////SAUCER DRONE///////////
 // A tiny robotic ranged enemy that fills the same niche for the MDF that the viscerator does for the Syndicate. Very weak and fragile, but can overwhelm even an equipped enemy with sheer volume of tiny bolts
 /mob/living/simple_animal/hostile/mothership_saucerdrone
-	name = "Saucer Drone"
+	name = "\improper Saucer Drone"
 	desc = "A tiny ufo-shaped scout drone. Where's a tiny interceptor when you need one?"
 	icon = 'icons/mob/animal.dmi'
 	icon_state = "minidrone"
 	icon_living = "minidrone"
-	pass_flags = PASSTABLE
+	pass_flags = PASSTABLE | PASSRAILING
 	maxHealth = 30 // Quite fragile
 	health = 30
 	melee_damage_type = BURN
@@ -57,7 +57,7 @@
 /mob/living/simple_animal/hostile/mothership_saucerdrone/death(var/gibbed = FALSE)
 	..(TRUE)
 	playsound(src, "sound/effects/explosion_small1.ogg", 50, 1)
-	visible_message("<span class='warning'>The [src] loses altitude and crash lands!</span>")
+	visible_message("<span class='warning'>\The [src] loses altitude and crash lands!</span>")
 	qdel(src)
 
 /mob/living/simple_animal/hostile/mothership_saucerdrone/emp_act(severity) // Vulnerable to EMP damage, not that you NEED to use EMPs
@@ -74,15 +74,17 @@
 ///////////////////////////////////////////////////////////////////HOVERDISC DRONE///////////
 // An armored robotic enemy meant to support grey soldiers in combat. It will usually stay back, using its detection range to its advantage while firing high-damage laser blasts from afar
 /mob/living/simple_animal/hostile/mothership_hoverdisc
-	name = "Hoverdisc Drone"
+	name = "\improper Hoverdisc Drone"
 	desc = "A heavily armored mothership combat drone. It's equipped with an anti-gravity propulsion system and an integrated heavy disintegrator."
 	icon = 'icons/mob/animal.dmi'
 	icon_state = "hoverdisc_drone"
 	icon_living = "hoverdisc_drone"
-	pass_flags = PASSTABLE
+	pass_flags = PASSTABLE | PASSRAILING
 	maxHealth = 200 // Pretty decent HP, but the armor is the real problem
 	health = 200
 	melee_damage_type = BURN
+	response_harm   = "harmlessly punches"
+	harm_intent_damage = 0
 	melee_damage_lower = 55 // Fighting it in melee is ballsy, to say the least
 	melee_damage_upper = 55
 	attacktext = "fires point-blank at"
@@ -121,19 +123,37 @@
 	speed = 3
 
 	ranged = 1
-	projectiletype = /obj/item/projectile/beam/immolationray/upgraded // A unique beam that deals more damage than a regular immolation ray
+	projectiletype = /obj/item/projectile/beam/scorchray/immolationray/upgraded // A unique beam that deals more damage than a regular immolation ray and can destroy walls
 	projectilesound = 'sound/weapons/ray1.ogg'
 	retreat_distance = 8 // It will attempt to linger at a distance just outside of a player's typical field of view, firing shots while deflecting return fire off its armor
 	minimum_distance = 8
 	ranged_cooldown = 4 // Some cooldown to balance the serious punch it packs
 	ranged_cooldown_cap = 4
 
-	environment_smash_flags = SMASH_LIGHT_STRUCTURES | SMASH_CONTAINERS | OPEN_DOOR_STRONG | OPEN_DOOR_SMART // Can open doors. Coincidentally this also seems to allow the mob to shoot through them (if they're glass airlocks)? It's weird
+	environment_smash_flags = SMASH_LIGHT_STRUCTURES | SMASH_CONTAINERS | SMASH_WALLS | OPEN_DOOR_STRONG | OPEN_DOOR_SMART // Can open doors and smash walls. Coincidentally this also seems to allow the mob to shoot through them (if they're glass airlocks)? It's weird
 	stat_attack = UNCONSCIOUS // DISINTEGRATION PROTOCOLS ACTIVE
+
+	var/damageblock = 15 // Most common melee weapons will do nothing against its thick armor
+
+	var/last_ufosound = 0
+	var/const/ufosound_cooldown = 30 SECONDS // After making a sound effect, needs to wait thirty seconds before having a chance to make one again. Prevents spam
+
+/mob/living/simple_animal/hostile/mothership_hoverdisc/Life()
+	..()
+	if((last_ufosound + ufosound_cooldown < world.time) && prob(5)) // Will occasionally play a spoopy ufo sound
+		visible_message("<span class='notice'>\The [src] emits a rhythmic hum.</span>")
+		playsound(src, 'sound/effects/ufo_appear.ogg', 50, 0)
+		last_ufosound = world.time
+	if(health >= (maxHealth/2)) // We've got a good bit of health, let's stay back and snipe
+		retreat_distance = 8
+		minimum_distance = 8
+	if(health < (maxHealth/2)) // We've taken a lot of damage, let's get up close and personal
+		retreat_distance = 2
+		minimum_distance = 2
 
 /mob/living/simple_animal/hostile/mothership_hoverdisc/death(var/gibbed = FALSE)
 	..(TRUE)
-	visible_message("<span class='warning'>The [src] shudders and violently explodes!</span>")
+	visible_message("<span class='warning'>\The [src] shudders and violently explodes!</span>")
 	new /obj/effect/gibspawner/robot(src.loc)
 	explosion(get_turf(src), -1, 2, 4, whodunnit = src)
 	qdel(src)
@@ -145,35 +165,56 @@
 	switch (severity)
 		if (1)
 			adjustBruteLoss(70)
+			spark(src)
 
 		if (2)
 			adjustBruteLoss(50)
+			spark(src)
 
-/mob/living/simple_animal/hostile/mothership_hoverdisc/attackby(var/obj/item/W as obj, var/mob/user as mob) // Melee weapon force has to be quite high to be effective
-	if(W.force >= 20)
-		var/damage = W.force
-		if (W.damtype == HALLOSS)
-			damage = 0
-		health -= damage
-		visible_message("<span class='danger'>[user] damages the [src] with \the [W]! </span>")
-		playsound(src, 'sound/effects/sparks1.ogg', 25)
+/mob/living/simple_animal/hostile/mothership_hoverdisc/proc/discblock(var/damage, var/atom/A) // Hoverdiscs have thick armor, and are unaffected by low force melee weapons
+	if (!damage || damage <= damageblock)
+		if (A)
+			visible_message("<span class='danger'>\The [A] glances harmlessly off of \the [src]'s armor plating! </span>")
+			anim(target = src, a_icon = 'icons/effects/64x64.dmi', flick_anim = "juggernaut_armor", lay = NARSIE_GLOW, offX = -WORLD_ICON_SIZE/2, offY = -WORLD_ICON_SIZE/2 + 4, plane = ABOVE_LIGHTING_PLANE) // Copied from juggernauts so players get visual feedback when their attacks aren't doing damage
+			playsound(src, 'sound/items/metal_impact.ogg', 25)
+		return TRUE
+	return FALSE
+
+/mob/living/simple_animal/hostile/mothership_hoverdisc/attackby(var/obj/item/O as obj, var/mob/user as mob)
+	if(discblock(O.force, O))
+		user.delayNextAttack(8)
 	else
-		visible_message("<span class='danger'>\The [W] glances harmlessly off of the [src]'s armor plating! </span>")
-		playsound(src, 'sound/items/metal_impact.ogg', 25)
+		..()
+
+/mob/living/simple_animal/hostile/mothership_hoverdisc/thrown_defense(var/obj/O)
+	if(discblock(O.throwforce,O))
+		return FALSE
+	return TRUE
+
+/mob/living/simple_animal/hostile/mothership_hoverdisc/apply_damage(var/damage = 0,var/damagetype = BRUTE, var/def_zone = null, var/blocked = 0, sharp, edge, var/used_weapon = null, ignore_events = 0)
+	if (discblock(damage))
+		return 0
+	return ..()
 
 /mob/living/simple_animal/hostile/mothership_hoverdisc/bullet_act(var/obj/item/projectile/P) // Tough nut. Energy weapons are almost completely ineffective, and ballistics do reduced damage. Ions are your best friend here
 	if(istype(P, /obj/item/projectile/energy) || istype(P, /obj/item/projectile/beam) || istype(P, /obj/item/projectile/forcebolt) || istype(P, /obj/item/projectile/change))
 		if(prob(35))
 			src.health -= P.damage
+			spark(src)
 		else
 			visible_message("<span class='danger'>The [P.name] dissipates harmlessly on the [src]'s armor plating!</span>") // Lasers that fail to get through "dissipate" and do no damage
+			anim(target = src, a_icon = 'icons/effects/64x64.dmi', flick_anim = "juggernaut_armor", lay = NARSIE_GLOW, offX = -WORLD_ICON_SIZE/2, offY = -WORLD_ICON_SIZE/2 + 4, plane = ABOVE_LIGHTING_PLANE)
+			playsound(src, 'sound/items/metal_impact.ogg', 25)
 		return PROJECTILE_COLLISION_DEFAULT
 	if(istype(P, /obj/item/projectile/bullet))
 		if(prob(35))
 			src.health -= P.damage
+			spark(src)
 		else
-			visible_message("<span class='danger'>The [P.name] glances off the [src]'s armor plating, failing to penetrate!</span>") // Bullets that fail to get through "deflect" and do reduced damage
-			src.health -= P.damage/5
+			visible_message("<span class='danger'>The [P.name] glances off the [src]'s armor plating, failing to penetrate!</span>") // Bullets that fail to get through "deflect" and do greatly reduced damage
+			anim(target = src, a_icon = 'icons/effects/64x64.dmi', flick_anim = "juggernaut_armor", lay = NARSIE_GLOW, offX = -WORLD_ICON_SIZE/2, offY = -WORLD_ICON_SIZE/2 + 4, plane = ABOVE_LIGHTING_PLANE)
+			playsound(src, 'sound/effects/bullet_ricocchet.ogg', 25, 0)
+			src.health -= P.damage/10
 		return PROJECTILE_COLLISION_DEFAULT
 	return (..(P))
 
@@ -189,11 +230,16 @@
 	speak = list("blblbb","wrmrmm","glglglg")
 	speak_emote = list("burbles", "hums")
 	emote_hear = list("gurgles")
+	emote_see = list("wiggles its bell", "probes around with its tendrils", "expands and contracts rhythmically")
 	speak_chance = 1
 	turns_per_move = 5
 	see_in_dark = 6
+	response_help  = "pokes"
+	response_disarm = "gently pushes aside"
+	response_harm   = "punches"
 	stop_automated_movement_when_pulled = TRUE
 	pass_flags = PASSTABLE // Can fly over tables
+	speak_override = TRUE
 
 	min_oxy = 0
 	max_oxy = 0
@@ -223,8 +269,14 @@
 	flying = 1
 	acidimmune = 1
 
+	var/trades_coins = 0 // Check that allows Phyl to give coins for Zam Raisins, but not a regular polyp
+	var/last_trade = 0
+	var/const/trade_cooldown = 120 SECONDS // Specifically here for the subtype that trades coins for Zam Raisins
 	var/gives_milk = TRUE
 	var/datum/reagents/udder = null
+
+/mob/living/simple_animal/hostile/retaliate/polyp/splashable()
+	return FALSE
 
 /mob/living/simple_animal/hostile/retaliate/polyp/New()
 	if(gives_milk)
@@ -264,6 +316,19 @@
 				to_chat(user, "<span class='warning'>[O] is full.</span>")
 			if(!transfered)
 				to_chat(user, "<span class='warning'>[src]'s tendrils are dry. Wait a bit longer...</span>")
+		if(trades_coins == 1 && istype(O, /obj/item/weapon/reagent_containers/food/snacks/zam_notraisins))
+			if((last_trade + trade_cooldown < world.time))
+				Calm()
+				playsound(src, 'sound/items/eatfood.ogg', rand(10,50), 1)
+				visible_message("<span class='notice'>[user] feeds \the [O] to [src]. It burbles contentedly, and drops something in [user]'s hand.</span>")
+				var/image/heart = image('icons/mob/animal.dmi',src,"heart-ani2")
+				heart.plane = ABOVE_HUMAN_PLANE
+				flick_overlay(heart, list(user.client), 20)
+				qdel(O)
+				user.put_in_hands(new /obj/item/weapon/coin/iron(loc))
+				last_trade = world.time
+			else
+				visible_message("<span class='notice'>[src] doesn't seem interested in \the [O] at the moment.</span>")
 		else if(istype(O, /obj/item/weapon/reagent_containers/food/snacks/meat))
 			Calm()
 			health+=15
@@ -290,163 +355,7 @@
 	meat_type = /obj/item/weapon/coin/iron // Instead of meat you get coins, 4 total
 	mob_property_flags = MOB_NO_LAZ // So he can't be killed and revived repeatedly to keep butchering coins
 
-	var/last_trade = 0
-	var/const/trade_cooldown = 120 SECONDS // Hopefully this is reasonable, considering he is an unlimited source of coins if the player has Zam NotRaisins
-
-/mob/living/simple_animal/hostile/retaliate/polyp/phyl/attackby(var/obj/item/O as obj, var/mob/user as mob)
-	if(stat == CONSCIOUS)
-		if(istype(O, /obj/item/weapon/reagent_containers/glass))
-			user.visible_message("<span class='notice'>[user] collects gelatin from [src]'s tendrils using \the [O].</span>")
-			var/obj/item/weapon/reagent_containers/glass/G = O
-			var/transfered = udder.trans_id_to(G, POLYPGELATIN, rand(5,10))
-			if(G.reagents.total_volume >= G.volume)
-				to_chat(user, "<span class='warning'>[O] is full.</span>")
-			if(!transfered)
-				to_chat(user, "<span class='warning'>[src]'s tendrils are dry. Wait a bit longer...</span>")
-		if(istype(O, /obj/item/weapon/reagent_containers/food/snacks/zam_notraisins))
-			if((last_trade + trade_cooldown < world.time))
-				Calm()
-				playsound(src, 'sound/items/eatfood.ogg', rand(10,50), 1)
-				visible_message("<span class='notice'>[user] feeds \the [O] to [src]. It burbles contentedly, and drops something in [user]'s hand.</span>")
-				var/image/heart = image('icons/mob/animal.dmi',src,"heart-ani2")
-				heart.plane = ABOVE_HUMAN_PLANE
-				flick_overlay(heart, list(user.client), 20)
-				qdel(O)
-				user.put_in_hands(new /obj/item/weapon/coin/iron)
-				last_trade = world.time
-			else
-				visible_message("<span class='notice'>[src] doesn't seem interested in \the [O] at the moment.</span>")
-		else if(istype(O, /obj/item/weapon/reagent_containers/food/snacks/meat))
-			Calm()
-			health+=15
-			playsound(src, 'sound/items/eatfood.ogg', rand(10,50), 1)
-			visible_message("<span class='notice'>[user] feeds \the [O] to [src]. It burbles contentedly.</span>")
-			var/image/heart = image('icons/mob/animal.dmi',src,"heart-ani2")
-			heart.plane = ABOVE_HUMAN_PLANE
-			flick_overlay(heart, list(user.client), 20)
-			qdel(O)
-		else
-			..()
-	else
-		..()
-
-///////////////////////////////////////////////////////////////////GYM RAT///////////
-// Can run on a treadmill much like the trader's colossal hamster, but not quite as efficiently. Maybe in the future I can code a unique reaction to creatine or something
-#define GYMRAT_MOVEDELAY 1
-/mob/living/simple_animal/hostile/retaliate/gym_rat
-	name = "gym rat"
-	desc = "It's pretty swole."
-	icon_state = "gymrat"
-	icon_living = "gymrat"
-	icon_dead = "gymrat-dead"
-	response_help  = "pets the"
-	response_disarm = "gently pushes aside the"
-	response_harm   = "stamps on the"
-	treadmill_speed = 6
-	health = 30
-	maxHealth = 30
-	speak_chance = 2
-	turns_per_move = 5
-	see_in_dark = 6
-	speak = list("More protein!","No pain, no gain!","I'm the cream of the crop!")
-	speak_emote = list("squeaks loudly")
-	emote_hear = list("squeaks loudly")
-	emote_see = list("flexes", "sweats", "does a rep")
-
-	size = SIZE_SMALL // If they're not at least small it doesn't seem like the treadmill works or makes sound
-	can_ventcrawl = TRUE
-	pass_flags = PASSTABLE
-	stop_automated_movement_when_pulled = TRUE
-
-	density = 0
-	min_oxy = 8 //Require atleast 8kPA oxygen
-	minbodytemp = 223		//Below -50 Degrees Celcius
-	maxbodytemp = 323	//Above 50 Degrees Celcius
-
-	melee_damage_lower = 1
-	melee_damage_upper = 3
-	attacktext = "bites"
-	attack_sound = 'sound/weapons/bite.ogg'
-
-	var/health_cap = 45 // Feeding it protein can pack on a whopping 50% increase in max health. GAINZ
-	var/icon_eat = "gymrat-eat"
-	var/obj/my_wheel
-
-/mob/living/simple_animal/hostile/retaliate/gym_rat/Life() // Copied from hammy wheel running code
-	if(timestopped)
-		return 0
-	. = ..()
-	if(.)
-		if(enemies.len && prob(10))
-			Calm()
-	if(!my_wheel && isturf(loc))
-		var/obj/machinery/power/treadmill/T = locate(/obj/machinery/power/treadmill) in loc
-		if(T)
-			wander = FALSE
-			my_wheel = T
-		else
-			wander = TRUE
-	if(my_wheel)
-		gymratwheel(20)
-
-/mob/living/simple_animal/hostile/retaliate/gym_rat/proc/gymratwheel(var/repeat)
-	if(repeat < 1 || stat)
-		return
-	if(!my_wheel || my_wheel.loc != loc) //no longer share a tile with our wheel
-		wander = TRUE
-		my_wheel = null
-		return
-	step(src,my_wheel.dir)
-	delayNextMove(GYMRAT_MOVEDELAY)
-	sleep(GYMRAT_MOVEDELAY)
-	gymratwheel(repeat-1)
-
-/mob/living/simple_animal/hostile/retaliate/gym_rat/proc/Calm()
-	enemies.Cut()
-	LoseTarget()
-	src.visible_message("<span class='notice'>[src] squeaks softly and calms down.</span>")
-
-/mob/living/simple_animal/hostile/retaliate/gym_rat/Retaliate()
-	if(!stat)
-		..()
-		src.say(pick("You want to go? Let's go!","You can't beat me, nerd!","I'll break you in half!"))
-
-/mob/living/simple_animal/hostile/retaliate/gym_rat/attackby(var/obj/item/O as obj, var/mob/user as mob) // Feed the gym rat some food
-	if(stat == CONSCIOUS)
-		if(istype(O, /obj/item/weapon/reagent_containers/food/snacks/cheesewedge)) // Cheese heals it a bit
-			Calm()
-			health+=5
-			playsound(src, 'sound/items/eatfood.ogg', rand(10,50), 1)
-			visible_message("<span class='notice'>[user] feeds \the [O] to [src]. It squeaks loudly.</span>")
-			var/image/heart = image('icons/mob/animal.dmi',src,"heart-ani2")
-			heart.plane = ABOVE_HUMAN_PLANE
-			flick_overlay(heart, list(user.client), 20)
-			flick(icon_eat, src)
-			qdel(O)
-		else if(istype(O, /obj/item/weapon/reagent_containers/food/snacks/meat)) // Meat heals less, but packs on a bit of extra maximum hp
-			Calm()
-			health+=1
-			maxHealth+=1
-			playsound(src, 'sound/items/eatfood.ogg', rand(10,50), 1)
-			visible_message("<span class='notice'>[user] feeds \the [O] to [src]. It squeaks loudly.</span>")
-			var/image/heart = image('icons/mob/animal.dmi',src,"heart-ani2")
-			heart.plane = ABOVE_HUMAN_PLANE
-			flick_overlay(heart, list(user.client), 20)
-			flick(icon_eat, src)
-			qdel(O)
-		else
-			..()
-	else
-		..()
-
-/mob/living/simple_animal/hostile/retaliate/gym_rat/New() // speaks mouse
-	..()
-	languages += all_languages[LANGUAGE_MOUSE]
-
-/mob/living/simple_animal/hostile/retaliate/gym_rat/mothership // Mothership faction version, so it doesn't get attacked by the vault dwellers
-	faction = "mothership"
-
-#undef GYMRAT_MOVEDELAY
+	trades_coins = 1 // This one will trade coins occasionally if fed Zam NotRaisins
 
 ///////////////////////////////////////////////////////////////////CATTLE SPECIMEN///////////
 // A talking cow!
@@ -485,6 +394,9 @@
 
 	var/gives_milk = TRUE
 	var/datum/reagents/udder = null
+
+/mob/living/simple_animal/hostile/retaliate/cattle_specimen/splashable()
+	return FALSE
 
 /mob/living/simple_animal/hostile/retaliate/cattle_specimen/New()
 	if(gives_milk)

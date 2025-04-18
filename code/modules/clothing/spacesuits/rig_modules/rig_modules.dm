@@ -11,6 +11,13 @@
 	rig = null
 	..()
 
+/obj/item/rig_module/proc/can_install(var/obj/item/clothing/suit/space/rig/target)
+   if ((locate(type) in target.modules)) //by default only allow one module of a type
+      return list(FALSE, "Could not install the " + name + ": module already present.") 
+   else
+      return list(TRUE, name +": successfully installed.")  //redundant second string to return, but just in case
+   
+
 /obj/item/rig_module/proc/examine_addition(mob/user)
 	return
 
@@ -162,6 +169,13 @@
 		rig.H.clothing_flags &= ~PLASMAGUARD
 	..()
 
+/obj/item/rig_module/plasma_proof/can_install(var/obj/item/clothing/suit/space/rig/target)
+   var/parent_check=..()
+   if(!parent_check[1])
+      return list(FALSE,parent_check[2]) 
+   if(target.clothing_flags & PLASMAGUARD)
+      return list(FALSE,"Could not install the " + name +": suit is already plasma sealed.")
+   return list(TRUE, name +": successfully installed.") 
 
 //Muscle tissue/Hulk module
 /obj/item/rig_module/muscle_tissue
@@ -222,9 +236,9 @@
 
 /obj/item/rig_module/rad_shield/New()
 	..()
-	first_threshold = max_capacity/2
-	second_threshold = max_capacity/4
-	third_threshold = max_capacity/10
+	first_threshold = max_capacity * 0.5
+	second_threshold = max_capacity * 0.75
+	third_threshold = max_capacity * 0.9
 
 /obj/item/rig_module/rad_shield/examine_addition(mob/user)
 	var/current_status = round((current_capacity/max_capacity) * 100)
@@ -246,7 +260,7 @@
 	rig.armor["rad"] = 100
 
 	say_to_wearer("[src] enabled.")
-	rig.wearer.register_event(/event/irradiate, src, .proc/absorb_rads)
+	rig.wearer.register_event(/event/irradiate, src, nameof(src::absorb_rads()))
 	..()
 
 /obj/item/rig_module/rad_shield/deactivate()
@@ -261,7 +275,7 @@
 		say_to_wearer("[src] disabled. Please cleanse it by sterilizing the suit in a suit storage unit.")
 	else
 		say_to_wearer("[src] disabled.")
-	rig.wearer?.unregister_event(/event/irradiate, src, .proc/absorb_rads)
+	rig.wearer?.unregister_event(/event/irradiate, src, nameof(src::absorb_rads()))
 	..()
 
 /obj/item/rig_module/rad_shield/suit_storage_act()
@@ -270,27 +284,45 @@
 
 /obj/item/rig_module/rad_shield/proc/absorb_rads(mob/living/carbon/human/user, rads)
 	if(rig?.wearer != user) //Well lad.
-		user.unregister_event(/event/irradiate, src, .proc/absorb_rads)
+		user.unregister_event(/event/irradiate, src, nameof(src::absorb_rads()))
 		return
 
 	if(rig.H)
 		current_capacity += min(max_capacity, (rads * ((100 - initial_helmet) / 100)))
 	current_capacity += min(max_capacity, (rads * ((100 - initial_suit) / 100)))
 
-	if(current_capacity > third_threshold && threshold_announced < third_threshold)
+	if(current_capacity >= third_threshold && threshold_announced < third_threshold)
 		say_to_wearer("\The [src] is at 90% capacity. Take precaution.")
 		threshold_announced = third_threshold
-	if(current_capacity > second_threshold && threshold_announced < second_threshold)
+	if(current_capacity >= second_threshold && threshold_announced < second_threshold)
 		say_to_wearer("\The [src] is at 75% capacity.")
 		threshold_announced = second_threshold
-	if(current_capacity > first_threshold && threshold_announced < first_threshold)
+	if(current_capacity >= first_threshold && threshold_announced < first_threshold)
 		say_to_wearer("\The [src] is at 50% capacity.")
 		threshold_announced = first_threshold
 
 	if(current_capacity >= max_capacity)
 		deactivate()
 
+/obj/item/rig_module/rad_shield/can_install(var/obj/item/clothing/suit/space/rig/target)
+   var/parent_check=..()
+   if(!parent_check[1])
+      return list(FALSE,parent_check[2])
+   if(locate(/obj/item/rig_module/rad_shield/adv) in target.modules) //don't allow both rad mods at once
+      return list(FALSE,"Could not install the " + name +": a radiation absorption device is already present.")
+   return list(TRUE, name +": successfully installed.") 
+
+
+
 /obj/item/rig_module/rad_shield/adv
 	name = "high capacity radiation absorption device"
 	desc = "Its acronym, R.A.D., and full name both convey the application of this module. By using similar technology as radiation collectors, it protects the suit wearer from incoming radiation until its collectors are full. This model features a higher capacity than the basic version. It can be reset by using a suit storage unit's cleaning operation."
 	max_capacity = 1600 //About 7-8 "item touches" worth based on the same conditions as the above testing.
+
+/obj/item/rig_module/rad_shield/adv/can_install(var/obj/item/clothing/suit/space/rig/target)
+   var/parent_check=..()
+   if(!parent_check[1])
+      return list(FALSE,parent_check[2])
+   if(locate(/obj/item/rig_module/rad_shield) in target.modules) //don't allow both rad mods at once
+      return list(FALSE,"Could not install the " + name +": a radiation absorption device is already present.")
+   return list(TRUE, name +": successfully installed.") 

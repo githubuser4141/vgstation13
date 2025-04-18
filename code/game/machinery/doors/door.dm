@@ -60,6 +60,7 @@ var/list/all_doors = list()
 
 	var/being_cut = FALSE
 	var/explosion_block = 0 //regular airlocks are 1, blast doors are 3, higher values mean increasingly effective at blocking explosions.
+	var/obj/machinery/door/arcane_linked_door = null
 
 /obj/machinery/door/proc/bashed_in(mob/user)
 	playsound(src, 'sound/items/Deconstruct.ogg', 50, 1)
@@ -270,15 +271,19 @@ var/list/all_doors = list()
 	if(!ticker)
 		return 0
 	for (var/obj/O in src.loc)
-		if (O.blocks_doors())
+		if (O.blocks_doors(src))
 			return 0
+	if(arcanetampered && arcane_linked_door && arcane_linked_door.density)
+		spawn(1)
+			arcane_linked_door.open()
 	if(!operating)
 		operating = 1
 
 	if(makes_noise)
 		playsound(src, soundeffect, soundpitch, 1)
 
-	set_opacity(0)
+	if(!arcanetampered || !arcane_linked_door)
+		set_opacity(0)
 	door_animate("opening")
 	if (animation_delay_predensity_opening)
 		sleep(animation_delay_predensity_opening)
@@ -291,7 +296,8 @@ var/list/all_doors = list()
 	if (animation_delay_predensity_opening)
 		sleep(animation_delay - animation_delay_predensity_opening)
 	update_icon()
-	set_opacity(0)
+	if(!arcane_linked_door)
+		set_opacity(0)
 	//update_freelook_sight()
 
 	if(operating == 1)
@@ -310,8 +316,12 @@ var/list/all_doors = list()
 		return
 
 	for (var/obj/O in src.loc)
-		if (O.blocks_doors())
+		if (O.blocks_doors(src))
 			return 0
+
+	if(arcanetampered && arcane_linked_door && !arcane_linked_door.density)
+		spawn(1)
+			arcane_linked_door.close()
 
 	operating = 1
 
@@ -381,6 +391,37 @@ var/list/all_doors = list()
 		anim(target = src, a_icon = 'icons/effects/effects.dmi', a_icon_state = "breakdoor", sleeptime = 10)
 		qdel(src)
 
+/obj/machinery/door/arcane_act(mob/user)
+	..()
+	if(arcane_linkable() && all_doors.len > 1)
+		var/list/door_selection = all_doors.Copy()
+		while(!arcane_linked_door || arcane_linked_door == src || arcane_linked_door.z != src.z || !arcane_linked_door.arcane_linkable())
+			arcane_linked_door = pick_n_take(door_selection)
+			if(!door_selection.len)
+				break
+		if(arcane_linked_door)
+			arcane_linked_door.arcanetampered = arcanetampered
+			arcane_linked_door.arcane_linked_door = src
+		return "D'R ST'K!"
+
+/obj/machinery/door/proc/arcane_linkable()
+	// no windoors, blocked doors or centcomm pls
+	if(!(flow_flags & ON_BORDER) && z != map.zCentcomm)
+		var/turf/T = get_turf(src)
+		if(T && !is_blocked_turf(T, src))
+			for(var/dir in shuffle(cardinal))
+				var/turf/T2 = get_step(T,dir)
+				if(T2 && !is_blocked_turf(T2))
+					return T2
+	return 0
+
+/obj/machinery/door/bless()
+	..()
+	if(arcane_linked_door)
+		arcane_linked_door = null
+		if(!density)
+			set_opacity(0)
+
 /obj/machinery/door/Destroy()
 	update_nearby_tiles()
 	all_doors -= src
@@ -399,7 +440,13 @@ var/list/all_doors = list()
 /obj/machinery/door/Crossed(AM as mob|obj) //Since we can't actually quite open AS the car goes through us, we'll do the next best thing: open as the car goes into our tile.
 	if(istype(AM, /obj/structure/bed/chair/vehicle/firebird)) //Which is not 100% correct for things like windoors but it's close enough.
 		open()
-	return ..()
+	if(arcanetampered && arcane_linked_door && !density && istype(AM,/atom/movable))
+		var/atom/movable/A = AM
+		var/turf/goodturf = arcane_linked_door.arcane_linkable()
+		if(goodturf)
+			A.forceMove(goodturf)
+			if(A.dir != get_dir(arcane_linked_door, goodturf))
+				A.dir = get_dir(arcane_linked_door, goodturf)
 
 /obj/machinery/door/CanAStarPass(var/obj/item/weapon/card/id/ID)
 	return !density || check_access(ID)
@@ -475,9 +522,16 @@ var/list/all_doors = list()
 /obj/machinery/door/can_overload()
 	return 0
 
+/obj/machinery/door/spook()
+	if(..())
+		denied()
+
 // Flash denied and such.
 /obj/machinery/door/proc/denied()
-	playsound(loc, 'sound/machines/denied.ogg', 50, 1)
+	if((Holiday == APRIL_FOOLS_DAY) && prob(10) || (prob(1) && prob(10))) // 1/1000 any time or 1/10 during April Fools to play the Half-Life "Access Denied" voiceover
+		playsound(loc, 'sound/machines/access_denied.ogg', 75)
+	else
+		playsound(loc, 'sound/machines/denied.ogg', 50, 1)
 	if (density) //Why are we playing a denied animation on an OPEN DOOR
 		door_animate("deny")
 

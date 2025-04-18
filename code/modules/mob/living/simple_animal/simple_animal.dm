@@ -1,6 +1,7 @@
 var/const/ANIMAL_CHILD_CAP = 50
+var/const/ANIMAL_EXTENDED_CHILD_CAP = 100
 var/global/list/animal_count = list() //Stores types, and amount of animals of that type associated with the type (example: /mob/living/simple_animal/dog = 10)
-//Animals can't breed if amount of children exceeds 50
+//Animals can't breed if amount of children exceeds 50, except cockroaches, who can breed up to 100 children
 
 /mob/living/simple_animal
 	name = "animal"
@@ -34,6 +35,7 @@ var/global/list/animal_count = list() //Stores types, and amount of animals of t
 
 	var/stop_automated_movement = 0 //Use this to temporarely stop random movement or to if you write special movement code for animals.
 	var/wander = 1	// Does the mob wander around when idle?
+	var/must_wander = FALSE //if true, the mob will try all cardinals when wandering if boxed in
 	var/stop_automated_movement_when_pulled = 1 //When set to 1 this stops the animal from moving when someone is pulling it.
 	//Interaction
 	var/response_help   = "pokes"
@@ -164,6 +166,18 @@ var/global/list/animal_count = list() //Stores types, and amount of animals of t
 /mob/living/simple_animal/airflow_hit(atom/A)
 	return
 
+/mob/living/simple_animal/Topic(href, href_list) //not so simple anymore are we
+	..()
+	if(href_list["hands"])
+		if(usr.incapacitated() || !Adjacent(usr) || (isanimal(usr) && !isgrinch(usr)))
+			return
+		handle_strip_hand(usr, text2num(href_list["hands"])) //href_list "hands" is the hand index, not the item itself. example, GRASP_LEFT_HAND
+
+	else if(href_list["item"])
+		if(usr.incapacitated() || !Adjacent(usr) || (isanimal(usr) && !isgrinch(usr)))
+			return
+		handle_strip_slot(usr, text2num(href_list["item"])) //href_list "item" would actually be the item slot, not the item itself. example: slot_head
+
 // For changing wander behavior
 /mob/living/simple_animal/proc/wander_move(var/turf/dest)
 	if(space_check())
@@ -248,7 +262,12 @@ var/global/list/animal_count = list() //Stores types, and amount of animals of t
 			if(turns_since_move >= turns_per_move)
 				if(!(stop_automated_movement_when_pulled && pulledby)) //Some animals don't move when pulled
 					INVOKE_EVENT(src, /event/before_move)
-					var/destination = get_step(src, pick(cardinal))
+					var/attempts = 3
+					var/our_options = cardinal.Copy()
+					var/destination = get_step(src, pick_n_take(our_options))
+					while(must_wander && destination == loc && attempts > 0)
+						destination = get_step(src, pick_n_take(our_options))
+						attempts--
 					wander_move(destination)
 					turns_since_move = 0
 					INVOKE_EVENT(src, /event/after_move)
@@ -353,6 +372,9 @@ var/global/list/animal_count = list() //Stores types, and amount of animals of t
 		temperature_alert = 0
 
 /mob/living/simple_animal/gib(var/animation = 0, var/meat = 1)
+	if(status_flags & BUDDHAMODE)
+		adjustBruteLoss(200)
+		return
 	if(icon_gib)
 		anim(target = src, a_icon = icon, flick_anim = icon_gib, sleeptime = 15)
 
@@ -422,11 +444,16 @@ var/global/list/animal_count = list() //Stores types, and amount of animals of t
 
 /mob/living/simple_animal/attack_animal(mob/living/simple_animal/M)
 	M.unarmed_attack_mob(src)
+	return 1
 
 /mob/living/simple_animal/bullet_act(var/obj/item/projectile/Proj)
 	if(!Proj)
 		return PROJECTILE_COLLISION_DEFAULT
 	Proj.on_hit(src, 0)
+	if(supernatural && isholyweapon(Proj))
+		playsound(loc, 'sound/weapons/welderattack.ogg', 50, 1)
+		anim(target = src, a_icon = 'icons/effects/effects.dmi', flick_anim = "holy",sleeptime = 5, lay = NARSIE_GLOW,plane = ABOVE_LIGHTING_PLANE)
+		purge = 3
 	adjustBruteLoss(Proj.damage)
 	return PROJECTILE_COLLISION_DEFAULT
 
@@ -506,7 +533,7 @@ var/global/list/animal_count = list() //Stores types, and amount of animals of t
 
 	var/damage = rand(1, 3)
 
-	if(istype(M,/mob/living/carbon/slime/adult))
+	if(M.slime_lifestage == SLIME_ADULT)
 		damage = rand(20, 40)
 	else
 		damage = rand(5, 35)
@@ -538,10 +565,20 @@ var/global/list/animal_count = list() //Stores types, and amount of animals of t
 	else if (user.is_pacified(VIOLENCE_DEFAULT,src))
 		return
 	if(supernatural && isholyweapon(O))
+		playsound(loc, 'sound/weapons/welderattack.ogg', 50, 1)
+		anim(target = src, a_icon = 'icons/effects/effects.dmi', flick_anim = "holy",sleeptime = 5, lay = NARSIE_GLOW,plane = ABOVE_LIGHTING_PLANE)
 		purge = 3
+	if(O.hitsound)
+		playsound(loc, O.hitsound, 50, 1, -1)
 	..()
 
-
+/mob/living/simple_animal/thrown_defense(var/obj/O,var/speed = 5)
+	if(supernatural && isholyweapon(O))
+		playsound(loc, 'sound/weapons/welderattack.ogg', 50, 1)
+		anim(target = src, a_icon = 'icons/effects/effects.dmi', flick_anim = "holy",sleeptime = 5, lay = NARSIE_GLOW,plane = ABOVE_LIGHTING_PLANE)
+		purge = 3
+		return 2
+	return ..()
 
 /mob/living/simple_animal/base_movement_tally()
 	return speed
@@ -558,7 +595,7 @@ var/global/list/animal_count = list() //Stores types, and amount of animals of t
 		stat(null, "Health: [round((health / maxHealth) * 100)]%")
 
 /mob/living/simple_animal/death(gibbed)
-	if(stat == DEAD)
+	if((status_flags & BUDDHAMODE) || stat == DEAD)
 		return
 
 	if(!gibbed)
@@ -685,9 +722,9 @@ var/global/list/animal_count = list() //Stores types, and amount of animals of t
 
 /mob/living/simple_animal/update_fire()
 	return
-/mob/living/simple_animal/IgniteMob()
+/mob/living/simple_animal/ignite()
 	return 0
-/mob/living/simple_animal/ExtinguishMob()
+/mob/living/simple_animal/extinguish()
 	return
 
 /mob/living/simple_animal/revive(refreshbutcher = 1)
@@ -835,6 +872,9 @@ var/global/list/animal_count = list() //Stores types, and amount of animals of t
 	else
 		return ..()
 
+/mob/living/simple_animal/log_say_message(var/datum/speech/speech, var/message_mode, var/message)
+	if(client)
+		..()
 
 /mob/living/simple_animal/proc/name_mob(mob/user)
 	var/n_name = copytext(sanitize(input(user, "What would you like to name \the [src]?", "Renaming \the [src]", null) as text|null), 1, MAX_NAME_LEN)
@@ -881,3 +921,23 @@ var/global/list/animal_count = list() //Stores types, and amount of animals of t
 		return TRUE
 	else
 		return FALSE
+
+/mob/living/simple_animal/proc/atepoison() //reusable function
+	health -= 5
+	if(prob(10))
+		if(istype(loc, /turf/simulated))
+			var/turf/simulated/T = loc
+			T.add_vomit_floor(src, 1, 0, 1)
+		Stun(5)
+		visible_message("<span class='warning'>[src] throws up!</span>","<span class='danger'>You throw up!</span>")
+		playsound(loc, 'sound/effects/splat.ogg', 50, 1)
+
+// Simplemobs do not have hands.
+/mob/living/simple_animal/put_in_hand_check(obj/item/W, index)
+	return 0
+
+/mob/living/simple_animal/isUnholy()
+	if (supernatural)
+		return TRUE
+	else
+		return ..()

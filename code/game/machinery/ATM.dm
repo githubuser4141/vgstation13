@@ -40,14 +40,26 @@ log transactions
 	..()
 	machine_id = "[station_name()] ATM #[multinum_display(num_financial_terminals,4)]"
 	num_financial_terminals++
+	update_icon()
 	if(ticker)
 		initialize()
 
 /obj/machinery/atm/Destroy()
 	if(atm_card)
-		qdel(atm_card)
-		atm_card = null
+		QDEL_NULL(atm_card)
 	..()
+
+/obj/machinery/atm/power_change()
+	..()
+	update_icon()
+
+/obj/machinery/atm/update_icon()
+	if(stat & (FORCEDISABLE|NOPOWER))
+		icon_state = "atm_off"
+		kill_moody_light()
+	else
+		icon_state = "atm"
+		update_moody_light('icons/lighting/moody_lights.dmi', "overlay_atm")
 
 /obj/machinery/atm/process()
 	if(stat & (FORCEDISABLE|NOPOWER))
@@ -98,16 +110,17 @@ log transactions
 		if(istype(I,/obj/item/weapon/spacecash))
 			var/obj/item/weapon/spacecash/dosh = I
 			//consume the money
-			authenticated_account.money += dosh.worth * dosh.amount
+			var/multiplier = dosh.arcanetampered ? rand(0,99) : 100
+			authenticated_account.money += round(dosh.worth * dosh.amount * (multiplier/100))
 			if(prob(50))
 				playsound(loc, 'sound/items/polaroid1.ogg', 50, 1)
 			else
 				playsound(loc, 'sound/items/polaroid2.ogg', 50, 1)
 
 			//create a transaction log entry
-			new /datum/transaction(authenticated_account, "Credit deposit", dosh.worth * dosh.amount, machine_id)
+			new /datum/transaction(authenticated_account, "Credit deposit", round(dosh.worth * dosh.amount * (multiplier/100)), machine_id, source_name = user.real_name)
 
-			to_chat(user, "<span class='info'>You insert [dosh.worth * dosh.amount] credit\s into \the [src].</span>")
+			to_chat(user, "<span class='info'>You insert [round(dosh.worth * dosh.amount * (multiplier/100))] credit\s into \the [src].</span>")
 			src.attack_hand(user)
 			qdel(I)
 	else
@@ -252,6 +265,7 @@ log transactions
 							<A href='?src=\ref[src];choice=view_screen;view_screen=1'>Change account security level</a><br>
 							<A href='?src=\ref[src];choice=view_screen;view_screen=2'>Make transfer to another bank account</a><br>
 							<A href='?src=\ref[src];choice=view_screen;view_screen=3'>View transaction log</a><br>
+							<A href='?src=\ref[src];choice=wage_percent'>Change virtual wallet wage payout percentage</a><br>
 							<A href='?src=\ref[src];choice=balance_statement'>Print balance statement</a><br>
 							<A href='?src=\ref[src];choice=create_debit_card'>Print new debit card ($5)</a><br>
 							<A href='?src=\ref[src];choice=toggle_account'>Toggle account status</a><br>
@@ -283,6 +297,12 @@ log transactions
 				if(authenticated_account && linked_db && authenticated_account.disabled < 2)
 					authenticated_account.disabled = !authenticated_account.disabled
 					to_chat(usr, "[bicon(src)]<span class='info'>Account [authenticated_account.disabled ? "disabled" : "enabled"].</span>")
+			if("wage_percent")
+				if(authenticated_account && linked_db && authenticated_account.disabled < 2)
+					var/new_wage_ratio = input(usr, "Input what % of wages end up in virtual wallets, from 0-100", "Wage Percentage",authenticated_account.virtual_wallet_wage_ratio) as num
+					if(!isnull(new_wage_ratio))
+						new_wage_ratio = clamp(new_wage_ratio,0,100)
+						authenticated_account.virtual_wallet_wage_ratio = new_wage_ratio
 			if("transfer")
 				if(CAN_INTERACT_WITH_ACCOUNT)
 					var/transfer_amount = text2num(href_list["funds_amount"])
@@ -291,13 +311,13 @@ log transactions
 					else if(transfer_amount <= authenticated_account.money)
 						var/target_account_number = text2num(href_list["target_acc_number"])
 						var/transfer_purpose = copytext(sanitize(href_list["purpose"]),1,MAX_MESSAGE_LEN)
-						if(linked_db.charge_to_account(target_account_number, authenticated_account.owner_name, transfer_purpose, machine_id, transfer_amount))
+						if(linked_db.charge_to_account(target_account_number, authenticated_account.owner_name, transfer_purpose, machine_id, transfer_amount, usr.real_name))
 							to_chat(usr, "[bicon(src)]<span class='info'>Funds transfer successful.</span>")
 							authenticated_account.money -= transfer_amount
 
 							//create an entry in the account transaction log
 							new /datum/transaction(authenticated_account, transfer_purpose, "-[transfer_amount]",\
-													machine_id, "Account #[target_account_number]")
+													machine_id, "Account #[target_account_number]", source_name = usr.real_name)
 						else
 							to_chat(usr, "[bicon(src)]<span class='warning'>Funds transfer failed.</span>")
 
@@ -365,7 +385,7 @@ log transactions
 							withdraw_arbitrary_sum(usr,amount)
 
 							//create an entry in the account transaction log
-							new /datum/transaction(authenticated_account, "Credit withdrawal", "-[amount]", machine_id)
+							new /datum/transaction(authenticated_account, "Credit withdrawal", "-[amount]", machine_id, source_name = usr.real_name)
 						else
 							to_chat(usr, "[bicon(src)]<span class='warning'>You don't have enough funds to do that!</span>")
 			if("withdraw_to_wallet")
@@ -385,7 +405,7 @@ log transactions
 
 							//create an entry in the account transaction log
 							new /datum/transaction(authenticated_account, "Credit transfer to wallet", "-[amount]",\
-													machine_id, card_id.virtual_wallet.owner_name)
+													machine_id, card_id.virtual_wallet.owner_name, source_name = usr.real_name)
 
 							new /datum/transaction(card_id.virtual_wallet, "Credit transfer to wallet", "[amount]",\
 													machine_id, authenticated_account.owner_name)
@@ -408,7 +428,7 @@ log transactions
 
 							//create an entry in the account transaction log
 							new /datum/transaction(authenticated_account, "Credit transfer from wallet", "[amount]",\
-													machine_id, card_id.virtual_wallet.owner_name)
+													machine_id, card_id.virtual_wallet.owner_name, source_name = usr.real_name)
 
 							new /datum/transaction(card_id.virtual_wallet, "Credit transfer from wallet", "-[amount]",\
 													machine_id, authenticated_account.owner_name)
@@ -443,7 +463,7 @@ log transactions
 					if(world.timeofday < lastprint + PRINT_DELAY)
 						to_chat(usr, "<span class='notice'>The [src.name] flashes an error on its display.</span>")
 						return
-					var/desired_authorized_name = input(usr, "Enter authorized name", "Set Authorized Name", authenticated_account.owner_name) as text
+					var/desired_authorized_name = copytext(sanitize(input(usr, "Enter authorized name", "Set Authorized Name", authenticated_account.owner_name) as text),1,MAX_NAME_LEN)
 					if(authenticated_account.charge(DEBIT_CARD_COST, null, "New debit card", machine_id, null, "Terminal"))
 						lastprint = world.timeofday
 						var/obj/item/weapon/card/debit/debit_card = new(src.loc, authenticated_account.account_number, desired_authorized_name)

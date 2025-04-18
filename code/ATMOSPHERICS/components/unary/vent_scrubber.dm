@@ -9,20 +9,20 @@
 
 	level				= 1
 
-	var/frequency		= 1439
+	frequency		= 1439
 	var/datum/radio_frequency/radio_connection
 
 	var/on				= 0
 	var/scrubbing		= 1 //0 = siphoning, 1 = scrubbing
-	var/scrub_CO2		= 1
-	var/scrub_Toxins	= 1
-	var/scrub_N2O		= 0
-	var/scrub_O2		= 0
-	var/scrub_N2		= 0
+
+	// Maps a gas ID to TRUE or FALSE, indicating whether that gas is currently being scrubbed.
+	var/scrubbed_gases[] = list()
+	var/list/default_scrubbed_gases = list( GAS_CARBON, GAS_PLASMA )
 
 	var/volume_rate		= 1000 // 120
 	var/panic			= 0 //is this scrubber panicked?
 	var/welded			= 0
+	var/stalled			= 0 //used to make the sprite red if the pipe is at MAX_PRESSURE and the scrubber stops working
 
 	var/external_pressure_bound = ONE_ATMOSPHERE
 	var/internal_pressure_bound = 0
@@ -49,13 +49,13 @@
 	frequency			= 1449
 	id_tag				= "inc_out"
 
-	scrub_Toxins		= 0
+	default_scrubbed_gases = list(GAS_CARBON)
 
 /obj/machinery/atmospherics/unary/vent_scrubber/vox
-	scrub_O2 = 1
+	default_scrubbed_gases = list(GAS_CARBON, GAS_PLASMA, GAS_OXYGEN)
 
 /obj/machinery/atmospherics/unary/vent_scrubber/on/vox
-	scrub_O2 = 1
+	default_scrubbed_gases = list(GAS_CARBON, GAS_PLASMA, GAS_OXYGEN)
 
 /obj/machinery/atmospherics/unary/vent_scrubber/New()
 	..()
@@ -67,6 +67,10 @@
 	if(ticker && ticker.current_state == 3)//if the game is running
 		//src.initialize()
 		src.broadcast_status()
+	for(var/gas_id in XGM.gases)
+		scrubbed_gases[gas_id] = FALSE
+	for(var/gas_id in default_scrubbed_gases)
+		scrubbed_gases[gas_id] = TRUE
 
 /obj/machinery/atmospherics/unary/vent_scrubber/update_icon()
 	overlays = null
@@ -79,20 +83,23 @@
 
 	if (node1 && on && !(stat & (FORCEDISABLE|NOPOWER|BROKEN)))
 		var/state = ""
+		var/state_postfix = ""
 		if (scrubbing)
 			state = "on"
-			if (scrub_O2)
-				state += "1"
-			else if(reducing_pressure)
-				state += "1"
+			if (scrubbed_gases[GAS_OXYGEN] || reducing_pressure)
+				state_postfix += "1"
 		else
 			state = "in"
 
+		if(stalled)
+			state_postfix = "_stalled" //overrides instead of appends, i didn't sprite on1_stalled
+
+		state += state_postfix
 		overlays += state
 
 	..()
 
-/obj/machinery/atmospherics/unary/vent_scrubber/proc/set_frequency(new_frequency)
+/obj/machinery/atmospherics/unary/vent_scrubber/set_frequency(new_frequency)
 	radio_controller.remove_object(src, frequency)
 	frequency = new_frequency
 	radio_connection = radio_controller.add_object(src, frequency, radio_filter_in)
@@ -125,16 +132,15 @@
 		"power" = on,
 		"scrubbing" = scrubbing,
 		"panic" = panic,
-		"filter_co2" = scrub_CO2,
-		"filter_tox" = scrub_Toxins,
-		"filter_n2o" = scrub_N2O,
-		"filter_o2" = scrub_O2,
-		"filter_n2" = scrub_N2,
 		"internal" = internal_pressure_bound,
 		"external" = external_pressure_bound,
 		"checks" = pressure_checks,
 		"sigtype" = "status"
 	)
+
+	for(var/gas_id in scrubbed_gases)
+		signal.data["scrub_"+gas_id] = scrubbed_gases[gas_id]
+
 	if(frequency == 1439)
 		var/area/this_area = get_area(src)
 		if(!this_area.air_scrub_names[id_tag])
@@ -147,12 +153,30 @@
 
 	return 1
 
+//Ideally it should turn red when the pipe is full AND it tries to scrub more gas
+//currently it turns red the moment the pipe is full, updating ~150 scrubbers at once once the waste pipeloop fills
+/obj/machinery/atmospherics/unary/vent_scrubber/proc/handle_stalling()
+	if(!stalled)
+		if(air_contents.return_pressure() >= MAX_PRESSURE)//not stalled but too much pressure, make stalled
+			stalled = TRUE
+			update_icon()
+		else //not stalled and good pressure, do nothing
+			return
+
+	else
+		if(air_contents.return_pressure() < MAX_PRESSURE) //stalled but good pressure, make unstalled
+			stalled = FALSE
+			update_icon()
+		else //stalled and too much pressure, do nothing
+			return
+
 /obj/machinery/atmospherics/unary/vent_scrubber/initialize()
 	..()
 	radio_filter_in = frequency==initial(frequency)?(RADIO_FROM_AIRALARM):null
 	radio_filter_out = frequency==initial(frequency)?(RADIO_TO_AIRALARM):null
 	if (frequency)
 		set_frequency(frequency)
+
 
 /obj/machinery/atmospherics/unary/vent_scrubber/process()
 	. = ..()
@@ -172,6 +196,9 @@
 
 
 	var/datum/gas_mixture/environment = loc.return_air()
+	handle_stalling()
+	if(stalled)
+		return //if we're at max pressure we don't do anything
 
 	//scrubbing mode
 	if(scrubbing)
@@ -181,21 +208,16 @@
 				reducing_pressure = 0
 				update_icon()
 			return
-		//if we're at max pressure we also don't do anything
-		if(air_contents.return_pressure() >= MAX_PRESSURE)
-			if(reducing_pressure)
-				reducing_pressure = 0
-				update_icon()
-			return
 
-		//I'm sorry you have to see this
-		//tl;dr: if we're scrubbing some gas that's in the environment, or if the external pressure bound is exceeded
+		//If there's a gas in the environment that we've been set to scrub OR the external pressure bound has been exceeded, scrub the air.
+		var/scrubbed_gas_present = FALSE
+		for(var/gas_id in scrubbed_gases)
+			if(scrubbed_gases[gas_id] && environment[gas_id] > 0)
+				scrubbed_gas_present = TRUE
+				break
+
 		var/external_pressure_delta = environment.return_pressure() - external_pressure_bound
-		if((scrub_Toxins && environment[GAS_PLASMA] > 0) || (scrub_CO2 && environment[GAS_CARBON] > 0) ||\
-			(scrub_N2O && environment[GAS_SLEEPING] > 0) ||	(scrub_O2 && environment[GAS_OXYGEN] > 0) ||\
-			(scrub_N2 && environment[GAS_NITROGEN] > 0) || ((pressure_checks & 1) &&\
-			external_pressure_delta > 0.05))
-
+		if(scrubbed_gas_present || ((pressure_checks & 1) && external_pressure_delta > 0.05))
 			var/transfer_moles = min(1, volume_rate / environment.volume) * environment.total_moles
 
 			//Take a gas sample
@@ -209,22 +231,9 @@
 			filtered_out.temperature = air_temperature
 
 			#define FILTER(g) filtered_out.adjust_gas((g), removed[g], FALSE)
-			if(scrub_Toxins)
-				FILTER(GAS_PLASMA)
-
-			if(scrub_CO2)
-				FILTER(GAS_CARBON)
-
-			if(scrub_O2)
-				FILTER(GAS_OXYGEN)
-
-			if(scrub_N2)
-				FILTER(GAS_NITROGEN)
-
-			if(scrub_N2O)
-				FILTER(GAS_SLEEPING)
-
-			FILTER(GAS_OXAGENT) //Apparently this is always scrubbed, even though it doesn't seem to appear in-game anywhere
+			for(var/gas_type in scrubbed_gases)
+				if(scrubbed_gases[gas_type])
+					FILTER(gas_type)
 
 			filtered_out.update_values()
 			removed.subtract(filtered_out)
@@ -251,7 +260,7 @@
 			if(network)
 				network.update = 1
 
-		//turn off pressure reduction flag if we were within the margin on the "I'm sorry you had to see this" check.
+		// Turn off pressure reduction flag if no scrubbed gases are present and pressure is within bounds.
 		else if(reducing_pressure)
 			reducing_pressure = 0
 			update_icon()
@@ -260,8 +269,7 @@
 		if(reducing_pressure)
 			reducing_pressure = 0
 			update_icon()
-		if (air_contents.return_pressure()>=MAX_PRESSURE)
-			return
+
 
 		var/transfer_moles = min(1, volume_rate / environment.volume) * environment.total_moles
 
@@ -282,6 +290,7 @@
 /obj/machinery/atmospherics/unary/vent_scrubber/receive_signal(datum/signal/signal)
 	if(stat & (FORCEDISABLE|NOPOWER|BROKEN))
 		return
+
 	if(!signal.data["tag"] || (signal.data["tag"] != id_tag) || (signal.data["sigtype"]!="command") || (signal.data["type"] && signal.data["type"] != "scrubber"))
 		return 0
 
@@ -313,31 +322,11 @@
 		scrubbing = text2num(signal.data["scrubbing"])
 	if(signal.data["toggle_scrubbing"])
 		scrubbing = !scrubbing
-
-	if(signal.data["co2_scrub"] != null)
-		scrub_CO2 = text2num(signal.data["co2_scrub"])
-	if(signal.data["toggle_co2_scrub"])
-		scrub_CO2 = !scrub_CO2
-
-	if(signal.data["tox_scrub"] != null)
-		scrub_Toxins = text2num(signal.data["tox_scrub"])
-	if(signal.data["toggle_tox_scrub"])
-		scrub_Toxins = !scrub_Toxins
-
-	if(signal.data["n2o_scrub"] != null)
-		scrub_N2O = text2num(signal.data["n2o_scrub"])
-	if(signal.data["toggle_n2o_scrub"])
-		scrub_N2O = !scrub_N2O
-
-	if(signal.data["o2_scrub"] != null)
-		scrub_O2 = text2num(signal.data["o2_scrub"])
-	if(signal.data["toggle_o2_scrub"])
-		scrub_O2 = !scrub_O2
-
-	if(signal.data["n2_scrub"] != null)
-		scrub_N2 = text2num(signal.data["n2_scrub"])
-	if(signal.data["toggle_n2_scrub"])
-		scrub_N2 = !scrub_N2
+	for(var/gas_id in scrubbed_gases)
+		if(signal.data[gas_id+"_scrub"] != null)
+			scrubbed_gases[gas_id] = text2num(signal.data[gas_id+"_scrub"])
+		if(signal.data["toggle_"+gas_id+"_scrub"] != null)
+			scrubbed_gases[gas_id] = !scrubbed_gases[gas_id]
 
 	if("checks" in signal.data)
 		pressure_checks = text2num(signal.data["checks"])
@@ -362,13 +351,11 @@
 		return
 
 	if(signal.data["status"] != null)
-		spawn(2)
-			broadcast_status()
+		broadcast_status()
 		return //do not update_icon
 
 //			log_admin("DEBUG \[[world.timeofday]\]: vent_scrubber/receive_signal: unknown command \"[signal.data["command"]]\"\n[signal.debug_print()]")
-	spawn(2)
-		broadcast_status()
+	broadcast_status()
 	update_icon()
 	return
 

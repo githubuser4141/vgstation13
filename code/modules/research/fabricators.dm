@@ -234,7 +234,7 @@
 	return 1
 
 /obj/machinery/r_n_d/fabricator/proc/has_bluespace_bin()
-	var/I = /obj/item/weapon/stock_parts/matter_bin/adv/super/bluespace/
+	var/I = /obj/item/weapon/stock_parts/matter_bin/adv/super/bluespace
 	//return (I in component_parts)
 	return locate(I,component_parts)
 
@@ -351,9 +351,16 @@
 			being_built.forceMove(L) //Put the thing in the lockbox
 			L.name += " ([being_built.name])"
 			being_built = L //Building the lockbox now, with the thing in it
+		part.after_craft(being_built,src)
 		var/turf/output = get_output()
 		being_built.forceMove(get_turf(output))
 		being_built.anchored = 0
+		if(arcanetampered)
+			if(prob(90))
+				qdel(being_built)
+				being_built = new /obj/item/weapon/bikehorn/rubberducky(get_turf(output)) // BONUS DUCKS! No material refunds
+			else
+				being_built.arcane_act(usr)
 		visible_message("[bicon(src)] \The [src] beeps: \"Successfully completed \the [being_built.name].\"")
 		being_built = null
 		last_made = part
@@ -361,6 +368,10 @@
 	updateUsrDialog()
 	busy = 0
 	return 1
+
+/obj/machinery/r_n_d/fabricator/arcane_act(mob/user)
+	..()
+	return "B'NUS D'CKS!"
 
 //max_length is, from the top of the list, the parts you want to queue down to
 /obj/machinery/r_n_d/fabricator/proc/add_part_set_to_queue(set_name, max_length)
@@ -371,7 +382,7 @@
 				break
 			var/datum/design/D = set_parts[i]
 			add_to_queue(D)
-	visible_message("[bicon(src)] <b>[src]</b> beeps: \"[set_name] parts were added to the queue\".")
+	visible_message("[bicon(src)] <b>[src]</b> beeps: \"[replacetext(set_name, "_", " ")] parts were added to the queue\".")
 	return
 
 /obj/machinery/r_n_d/fabricator/proc/add_to_queue(var/datum/design/part)

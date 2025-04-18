@@ -45,6 +45,16 @@
 	to_chat(viewers(user), "<span class='danger'>[user] is [pick("staving","robusting")] \his head in with the [src.name]! It looks like \he's  trying to commit suicide!</span>")
 	return (SUICIDE_ACT_BRUTELOSS)
 
+/obj/item/weapon/storage/toolbox/arcane_act(mob/user)
+	..()
+	force = 0
+	throwforce = 0
+	return "R'B'STO!"
+
+/obj/item/weapon/storage/toolbox/bless()
+	..()
+	force = initial(force)
+	throwforce = initial(throwforce)
 
 /obj/item/weapon/storage/toolbox/emergency
 	name = "emergency toolbox"
@@ -94,13 +104,19 @@
 
 /obj/item/weapon/storage/toolbox/electrical/New()
 	..()
-	var/color = pick("red","yellow","green","blue","pink","orange","cyan","white")
+	var/color = pick("#FF0000","#FFED00","#0B8400","#005C84","#CA00B6","#CA6900","#00B5CA","#D0D0D0")
 	new /obj/item/stack/cable_coil(src,30,color)
 	new /obj/item/stack/cable_coil(src,30,color)
 	if(prob(5))
 		new /obj/item/clothing/gloves/yellow(src)
 	else
 		new /obj/item/stack/cable_coil(src,30,color)
+
+/obj/item/weapon/storage/toolbox/electrical/arcane_act(mob/user)
+	for(var/atom/A in contents)
+		qdel(A)
+		new /obj/item/clothing/gloves/fyellow(src)
+	return ..()
 
 /obj/item/weapon/storage/toolbox/syndicate
 	name = "suspicious looking toolbox"
@@ -137,3 +153,28 @@
 	..()
 	var/color = pick("red","yellow","green","blue","pink","orange","cyan","white")
 	new /obj/item/stack/cable_coil(src,30,color)
+
+/obj/item/weapon/storage/toolbox/paint
+	name = "painter's toolbox"
+	desc = "Contains an assortment of paints for the artistic spacefarer."
+	icon_state = "toolbox_paint"
+	item_state = "toolbox_paint"
+	inhand_states = list("left_hand" = 'icons/mob/in-hand/left/arts_n_crafts.dmi', "right_hand" = 'icons/mob/in-hand/right/arts_n_crafts.dmi')
+	attack_verb = list("daubs", "decorates", "slathers")
+	max_combined_w_class = 42
+	items_to_spawn = list(
+		/obj/item/weapon/reagent_containers/glass/metal_bucket/paint/filled/red,
+		/obj/item/weapon/reagent_containers/glass/metal_bucket/paint/filled/vermilion,
+		/obj/item/weapon/reagent_containers/glass/metal_bucket/paint/filled/orange,
+		/obj/item/weapon/reagent_containers/glass/metal_bucket/paint/filled/amber,
+		/obj/item/weapon/reagent_containers/glass/metal_bucket/paint/filled/yellow,
+		/obj/item/weapon/reagent_containers/glass/metal_bucket/paint/filled/chartreuse,
+		/obj/item/weapon/reagent_containers/glass/metal_bucket/paint/filled/green,
+		/obj/item/weapon/reagent_containers/glass/metal_bucket/paint/filled/turquoise,
+		/obj/item/weapon/reagent_containers/glass/metal_bucket/paint/filled/blue,
+		/obj/item/weapon/reagent_containers/glass/metal_bucket/paint/filled/indigo,
+		/obj/item/weapon/reagent_containers/glass/metal_bucket/paint/filled/violet,
+		/obj/item/weapon/reagent_containers/glass/metal_bucket/paint/filled/magenta,
+		/obj/item/weapon/reagent_containers/glass/metal_bucket/paint/filled/black,
+		/obj/item/weapon/reagent_containers/glass/metal_bucket/paint/filled/white,
+	)

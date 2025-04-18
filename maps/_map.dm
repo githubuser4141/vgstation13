@@ -32,11 +32,6 @@
 	var/zAsteroid = 5
 	var/zDeepSpace = 6
 
-	//Center of thunderdome admin room
-	var/tDomeX = 0
-	var/tDomeY = 0
-	var/tDomeZ = 0
-
 	//Holomap offsets
 	var/list/holomap_offset_x = list()
 	var/list/holomap_offset_y = list()
@@ -46,6 +41,8 @@
 
 	//nanoui stuff
 	var/map_dir = ""
+	//buildmode reset
+	var/file_dir = ""
 
 	//Fuck the preprocessor
 	var/dorf = 0
@@ -131,7 +128,7 @@
 		var/path = levelPaths[i]
 		addZLevel(new path, i)
 
-/datum/map/proc/addZLevel(datum/zLevel/level, z_to_use = 0)
+/datum/map/proc/addZLevel(datum/zLevel/level, z_to_use = 0, make_base_turf = FALSE, fast_base_turf = FALSE)
 
 
 	if(!istype(level))
@@ -144,8 +141,9 @@
 	zLevels[z_to_use] = level
 	if(!level.movementJammed)
 		accessable_z_levels += list("[z_to_use]" = level.movementChance)
-
 	level.z = z_to_use
+	if(!istype(level.base_turf,/turf/space) && make_base_turf)
+		level.reset_base_turf(/turf/space,fast_base_turf)
 
 var/global/list/accessable_z_levels = list()
 
@@ -194,6 +192,18 @@ var/global/list/accessable_z_levels = list()
 /datum/zLevel/proc/post_mapload()
 	return
 
+/datum/zLevel/proc/reset_base_turf(old_type, fast_base_turf = FALSE)
+	for(var/turf/T in block(locate(1,1,z),locate(world.maxx,world.maxy,z)))
+		if(istype(T,old_type))
+			if(fast_base_turf)
+				new base_turf(T)
+			else
+				T.set_area(base_area)
+				T.ChangeTurf(base_turf)
+
+/datum/zLevel/proc/blur_holomap(var/area/aera, var/turf/truf)
+	return FALSE
+
 ////////////////////////////////
 
 /datum/zLevel/station
@@ -215,8 +225,16 @@ var/global/list/accessable_z_levels = list()
 	movementChance = ZLEVEL_BASE_CHANCE * ZLEVEL_SPACE_MODIFIER
 
 /datum/zLevel/mining
-
 	name = "mining"
+
+/datum/zLevel/krakenroid
+	name = "krakenroid"
+
+/datum/zLevel/krakenroid/blur_holomap(var/area/aera, var/turf/truf)
+	if (istype(aera, /area/mine/explored) && !istype(truf, /turf/unsimulated/floor/airless))
+		if (prob(80)) //blurring the shape of Snaxi's Kraken asteroid so it's a bit more subtle.
+			return TRUE
+	return FALSE
 
 //for snowmap
 /datum/zLevel/snowsurface

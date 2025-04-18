@@ -1,4 +1,6 @@
 var/global/datum/controller/occupations/job_master
+var/global/alt_job_limit = 0 //list of alternate jobs available for new hires
+
 
 #define FREE_ASSISTANTS 2
 
@@ -19,6 +21,9 @@ var/global/datum/controller/occupations/job_master
 	var/list/labor_consoles = list()
 	var/list/assistant_second_chance = list()
 
+	var/alt_database_active
+	var/list/alternates = list()
+
 /datum/controller/occupations/proc/SetupOccupations(var/faction = "Station")
 	occupations = list()
 	var/list/all_jobs = typesof(/datum/job)
@@ -31,7 +36,9 @@ var/global/datum/controller/occupations/job_master
 			continue
 		if(job.faction != faction)
 			continue
-
+		if(istype(job,/datum/job/alternate))
+			alternates += job
+			continue
 		if(job.must_be_map_enabled)
 			if(!map)
 				continue
@@ -55,9 +62,13 @@ var/global/datum/controller/occupations/job_master
 
 /datum/controller/occupations/proc/GetJob(var/rank)
 	RETURN_TYPE(/datum/job)
+	var/list/combined_occupations = list()
+	combined_occupations.Add(occupations)
+	if(alt_database_active)
+		combined_occupations.Add(alternates)
 	if(!rank)
 		return null
-	for(var/datum/job/J in occupations)
+	for(var/datum/job/J in combined_occupations)
 		if(!J)
 			continue
 		if(J.title == rank)
@@ -81,7 +92,15 @@ var/global/datum/controller/occupations/job_master
 		if(!latejoin)
 			position_limit = job.spawn_positions
 		if((job.current_positions < position_limit) || position_limit == -1)
-			Debug("Player: [player] is now Rank: [rank], JCP:[job.current_positions], JPL:[position_limit]")
+			if(alt_database_active && (total_alt_positions < alt_job_limit) && latejoin) //Labor console database has been hacked; Centcomm is sending the wrong employees!
+				var/altrank = pick(alternate_positions)
+				if(altjobprompt(altrank,rank,player))
+					rank = altrank
+					Debug("[player] is being assigned non-standard job as the alternate jobs database is installed.")
+					Debug("Player: [player] is now Rank: [rank], JCP:[total_alt_positions], JPL:[alt_job_limit]")
+					total_alt_positions++
+			else
+				Debug("Player: [player] is now Rank: [rank], JCP:[job.current_positions], JPL:[position_limit]")
 			player.mind.assigned_role = rank
 			player.mind.job_priority = pref_level
 			player.mind.role_alt_title = GetPlayerAltTitle(player, rank)
@@ -140,11 +159,15 @@ var/global/datum/controller/occupations/job_master
 		if(job.priority)
 			job.priority = FALSE
 			priority_jobs_remaining++
+			if(!job.head_position)
+				DePrioritzeDeparmentHead(job)
 		else
 			if(priority_jobs_remaining < 1)
 				return 0
 			job.priority = TRUE
 			priority_jobs_remaining--
+			if(!job.head_position)
+				PrioritzeDeparmentHead(job)
 		if(user)
 			log_admin("[key_name(user)] has set the priority of the [rank] job to [job.priority].")
 			message_admins("[key_name_admin(user)] has set the priority of the [rank] job to [job.priority].")
@@ -152,6 +175,21 @@ var/global/datum/controller/occupations/job_master
 			to_chat(player, "<span class='notice'>The [rank] job is [job.priority ? "now highly requested!" : "no longer highly requested."]</span>")
 		return 1
 	return 0
+
+/datum/controller/occupations/proc/PrioritzeDeparmentHead(var/datum/job/job)
+	if(job.department == "Civilian")
+		return
+	var/datum/job/head = locate(job.department_head) in job_master.occupations
+	head.department_prioritized = TRUE
+
+/datum/controller/occupations/proc/DePrioritzeDeparmentHead(var/datum/job/job)
+	var/datum/job/head = locate(job.department_head) in job_master.occupations
+	var/list/remaining_prioritized_jobs = job_master.GetPrioritizedJobs()
+	for(var/datum/job/J in remaining_prioritized_jobs)
+		// If there is still a job from that department prioritized
+		if(J.department == job.department)
+			return
+	head.department_prioritized = FALSE
 
 /datum/controller/occupations/proc/IsJobPrioritized(var/rank)
 	var/datum/job/job = GetJob(rank)
@@ -237,6 +275,16 @@ var/global/datum/controller/occupations/job_master
 		AssignRole(candidate, command_position)
 	return
 
+/** Proc GetSecurityCount
+ *  gets the current number of 'security' roles currently assigned to the station
+ **/
+/datum/controller/occupations/proc/GetSecurityCount()
+	var/datum/job/officer = job_master.GetJob("Security Officer")
+	var/datum/job/warden = job_master.GetJob("Warden")
+	var/datum/job/hos = job_master.GetJob("Head of Security")
+	var/datum/job/detective = job_master.GetJob("Detective")
+	return (officer.current_positions + warden.current_positions + hos.current_positions + detective.current_positions)
+
 /** Proc DivideOccupations
  *  fills var "assigned_role" for all ready players.
  *  This proc must not have any side effect besides of modifying "assigned_role".
@@ -306,13 +354,8 @@ var/global/datum/controller/occupations/job_master
 	// Rejoice, for you have been given a second chance to be a greytider.
 	Debug("DO, Running AC2")
 
-	var/count = 0
-	var/datum/job/officer = job_master.GetJob("Security Officer")
-	var/datum/job/warden = job_master.GetJob("Warden")
-	var/datum/job/hos = job_master.GetJob("Head of Security")
-	var/datum/job/detective = job_master.GetJob("Detective")
+	var/count = GetSecurityCount()
 	var/datum/job/master_assistant = GetJob("Assistant")
-	count = (officer.current_positions + warden.current_positions + hos.current_positions + detective.current_positions)
 
 	// For those who wanted to be assistant if their preferences were filled, here you go.
 	for(var/mob/new_player/player in unassigned)
@@ -332,19 +375,37 @@ var/global/datum/controller/occupations/job_master
 				continue //no, you can't evade the blacklist just by not being picked for your available jobs
 			Debug("AC2 Assistant located, Player: [player]")
 			AssignRole(player, "Assistant")
+			master_assistant = GetJob("Assistant")
 
 	// Those that got assigned a role, but had assistant higher.
+	var/security_jobs = list(
+		/datum/job/hos,
+		/datum/job/warden,
+		/datum/job/detective,
+		/datum/job/officer)
 	for (var/mob/new_player/player in shuffle(player_list))
 		if (player.ckey in assistant_second_chance)
-			var/assistant_pref = assistant_second_chance[player.ckey]
-			Debug("AC3: [player] running the second chances for priority [assistant_pref]")
-			if(master_assistant.current_positions-FREE_ASSISTANTS_BRUT > (config.assistantratio * count)) // Not enough sec...
-				if(count < 5) // And less than 5 seccies...
-					Debug("AC3: [player] failed the lottery.")
-			if (assistant_pref < player.mind.job_priority)
-				Debug("AC3: got made an assistant as a second chance.")
+			var/secmod = 0
+			Debug("AC3: [player] running the second chance for assistant")
+
+			//if they are already a security officer, add a modifier to the number of secoffs to see if they qualify for assistant
+			var/datum/job/oldjob = GetJob(player.mind.assigned_role)
+			for(var/secjob in security_jobs)
+				if(istype(oldjob, secjob))
+					Debug("AC3: [player] is a security officer of some sort, noting in case of the assistant cap.")
+					secmod = 1
+			//and if there's enough security officers (assuming you lose your current job) to let you be an assistant...
+			if(!(master_assistant.current_positions-FREE_ASSISTANTS_BRUT > (config.assistantratio * (count-secmod))) || ((count-secmod) >= 5))
+				//No need to check assistant prefs, if you're here then they're on the second_chance list
+				Debug("AC3: [player] got made an assistant as a second chance.")
 				UnassignRole(player)
+				//This may change the number of security players, so we have to update the list of secoffs
+				if(secmod)
+					count = GetSecurityCount()
 				AssignRole(player, "Assistant")
+				master_assistant = GetJob("Assistant")
+			else
+				Debug("AC3: [player] failed the second chance assistant lottery.")
 
 	//Final pass - first deal with the empty job group, otherwise send any leftovers to the lobby
 	final_pass: //this is a loop label
@@ -385,11 +446,7 @@ var/global/datum/controller/occupations/job_master
 // -- Snowflaked proc which can be adjusted to more jobs than assistants if needed.
 /datum/controller/occupations/proc/CheckAssistantCount(var/mob/new_player/player, var/level)
 	//People who wants to be assistants, sure, go on.
-	var/count = 0
-	var/datum/job/officer = job_master.GetJob("Security Officer")
-	var/datum/job/warden = job_master.GetJob("Warden")
-	var/datum/job/hos = job_master.GetJob("Head of Security")
-	count = (officer.current_positions + warden.current_positions + hos.current_positions)
+	var/count = GetSecurityCount()
 	Debug("DO, Running Assistant Check 1 for [player]")
 	var/datum/job/master_assistant = GetJob("Assistant")
 	var/not_enough_sec = (master_assistant.current_positions - FREE_ASSISTANTS_BRUT) > (config.assistantratio * count)
@@ -407,9 +464,11 @@ var/global/datum/controller/occupations/job_master
 	Debug("DO, AC1 end")
 	return TRUE
 
-/datum/controller/occupations/proc/EquipRank(var/mob/living/carbon/human/H, var/rank, var/joined_late = 0)
-	if(!H)
+/datum/controller/occupations/proc/PostJobSetup(var/mob/living/carbon/human/H)
+	if(!(H && H.mind && H.mind.assigned_role))
 		return 0
+	var/joined_late = ticker.current_state == GAME_STATE_PLAYING ? TRUE : FALSE
+	var/rank = H.mind.assigned_role
 	var/datum/job/job = GetJob(rank)
 	if(job && !job.no_starting_money)
 		//give them an account in the station database
@@ -418,9 +477,10 @@ var/global/datum/controller/occupations/job_master
 		var/balance_wallet = rand(100,250)
 		var/bank_pref_number = H.client.prefs.bank_security
 		var/bank_pref = bank_security_num2text(bank_pref_number)
+		var/pref_wage_ratio = H.client.prefs.wage_ratio
 		if(centcomm_account_db)
 			var/wage = job.get_wage()
-			var/datum/money_account/M = create_account(H.real_name, balance_bank, null, wage_payout = wage, security_pref = bank_pref_number)
+			var/datum/money_account/M = create_account(H.real_name, balance_bank, null, wage_payout = wage, security_pref = bank_pref_number, ratio_pref = pref_wage_ratio)
 
 			if (joined_late)
 				latejoiner_allowance += wage + round(wage/10)
@@ -437,7 +497,7 @@ var/global/datum/controller/occupations/job_master
 				if(M.transaction_log.len)
 					var/datum/transaction/T = M.transaction_log[1]
 					remembered_info += "<b>Your account was created:</b> [T.time], [T.date] at [T.source_terminal]<br>"
-				H.mind.store_memory(remembered_info)
+				H.mind.store_memory(remembered_info, category=MIND_MEMORY_GENERAL, forced=TRUE)
 
 				H.mind.initial_account = M
 				H.mind.initial_wallet_funds = balance_wallet
@@ -452,7 +512,7 @@ var/global/datum/controller/occupations/job_master
 					remembered_info += "<b>Your department's account pin is:</b> [department_account.remote_access_pin]<br>"
 					remembered_info += "<b>Your department's account funds are:</b> $[department_account.money]<br>"
 
-				H.mind.store_memory(remembered_info)
+				H.mind.store_memory(remembered_info, category=MIND_MEMORY_GENERAL, forced=TRUE)
 
 			spawn()
 				to_chat(H, "<span class='danger'>Your bank account number is: <span class='darknotice'>[M.account_number]</span>, your bank account pin is: <span class='darknotice'>[M.remote_access_pin]</span></span>")
@@ -460,11 +520,6 @@ var/global/datum/controller/occupations/job_master
 				to_chat(H, "<span class='danger'>Your bank account security level is set to: <span class='darknotice'>[bank_pref]</span></span>")
 
 	var/alt_title = null
-
-	if(job)
-		job.equip(H, job.priority) // Outfit datum.
-	else
-		to_chat(H, "Your job is [rank] and the game just can't handle it! Please report this bug to an administrator.")
 
 	H.job = rank
 
@@ -474,13 +529,8 @@ var/global/datum/controller/occupations/job_master
 	if(job)
 		job.introduce(H, (alt_title ? alt_title : rank))
 	else
-		to_chat(H, "<B>You are the [alt_title ? alt_title : rank].</B>")
-		to_chat(H, "<b>As the [alt_title ? alt_title : rank] you answer directly to [job.supervisors]. Special circumstances may change this.</b>")
-		if(job.req_admin_notify)
-			to_chat(H, "<b>You are playing a job that is important for Game Progression. If you have to disconnect, please notify the admins via adminhelp.</b>")
+		to_chat(H, "<B>You are the [alt_title ? alt_title : rank]. Special circumstances may change this.</B>")
 
-	if(job.priority)
-		to_chat(H, "<span class='notice'>You've been granted a little bonus for filling a high-priority job. Enjoy!</span>")
 	return 1
 
 /datum/controller/occupations/proc/LoadJobs(jobsfile) //ran during round setup, reads info from jobs.txt -- Urist
@@ -550,3 +600,12 @@ var/global/datum/controller/occupations/job_master
 
 		tmp_str += "HIGH=[level1]|MEDIUM=[level2]|LOW=[level3]|NEVER=[level4]|BANNED=[level5]|YOUNG=[level6]|-"
 		feedback_add_details("job_preferences",tmp_str)
+
+/datum/controller/occupations/proc/altjobprompt(var/newrank,var/oldrank,var/mob/user)
+	var/turf/oldloc = get_turf(user)
+	user.forceMove(null)
+	if(alert(user,"Central Command had a mix-up and is attempting to send you to the station as \an [newrank]! Would you like to correct them?",,"No - play as [newrank]","Yes - play as [oldrank]") == "No - play as [newrank]")
+		return 1
+	user.forceMove(oldloc)
+	message_admins("[user.key] has opted out of playing as \an [newrank].")
+	return 0

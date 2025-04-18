@@ -5,9 +5,11 @@
 	icon_state = "deliveryPaper"
 	singular_name = "paper sheet"
 	w_class = W_CLASS_SMALL
+	w_type = RECYK_WOOD
 	amount = 24
 	max_amount = 24
 	restock_amount = 2
+	flammable = TRUE
 	//If it's null, it can't wrap that type.
 	var/smallpath = /obj/item/delivery //We use this for items
 	var/bigpath = /obj/item/delivery/large //We use this for structures (crates, closets, recharge packs, etc.)
@@ -36,7 +38,9 @@
 /obj/item/stack/package_wrap/preattack(var/obj/target, var/mob/user, var/proximity_flag)
 	if(!istype(target, /atom/movable) || !proximity_flag)
 		return
-	if(istype(target,/obj/machinery/wrapping_machine))
+	if(istype(target,/obj/machinery/autoprocessor/wrapping))
+		return
+	if(issilicon(user) && istype(target.loc,/obj/item/weapon/robot_module))
 		return
 	if(!is_type_in_list(target, cannot_wrap))
 		if(istype(target, /obj/item/weapon/storage))
@@ -53,7 +57,9 @@
 	var/atom/movable/target = attacked
 	if(!istype(target))
 		return
-	if(istype(target,/obj/machinery/wrapping_machine))
+	if(istype(target,/obj/machinery/autoprocessor/wrapping))
+		return
+	if(issilicon(user) && istype(target.loc,/obj/item/weapon/robot_module))
 		return
 	if(is_type_in_list(target, cannot_wrap))
 		to_chat(user, "<span class='notice'>You can't wrap that.</span>")
@@ -125,11 +131,7 @@
 			H.forceMove(present)
 			H.attack_log += text("\[[time_stamp()]\] <font color='orange'>Has been wrapped with [src.name]  by [user.name] ([user.ckey])</font>")
 			user.attack_log += text("\[[time_stamp()]\] <font color='red'>Used the [src.name] to wrap [H.name] ([H.ckey])</font>")
-			if(!iscarbon(user))
-				H.LAssailant = null
-			else
-				H.LAssailant = user
-				H.assaulted_by(user)
+			H.assaulted_by(user)
 			log_attack("<font color='red'>[user.name] ([user.ckey]) used the [src.name] to wrap [H.name] ([H.ckey])</font>")
 			use(2)
 			return 1

@@ -90,6 +90,15 @@
 	max_shells = 3
 	silencer_offset = list(22,5)
 
+/obj/item/weapon/gun/projectile/shotgun/pump/combat/pistol
+	name = "shotgun pistol"
+	desc = "Even shortier than the combat shorty."
+	icon_state = "scshotgun"
+	w_class = W_CLASS_SMALL
+	slot_flags = SLOT_BELT
+	max_shells = 1
+	silencer_offset = list(22,5)
+
 //this is largely hacky and bad :(	-Pete
 /obj/item/weapon/gun/projectile/shotgun/doublebarrel
 	name = "double-barreled shotgun"
@@ -176,11 +185,32 @@
 	desc = "bang-bang, click, tack, shoomph, click"
 	icon_state = "supershotgun"
 	item_state = "sawnshotgun"
+	fire_sound = 'sound/weapons/supershotgun_fire.ogg'
+	reloadsound = 'sound/weapons/supershotgun_load.ogg'
+	empty_sound = 'sound/weapons/supershotgun_open.ogg'
 	fire_delay = 0
 
 /obj/item/weapon/gun/projectile/shotgun/doublebarrel/super/Fire(atom/target, mob/living/user, params, reflex = 0, struggle = 0, var/use_shooter_turf = FALSE)
 	if(..())
 		..()
+		attack_self(user)
+
+
+/obj/item/weapon/gun/projectile/shotgun/doublebarrel/superduper
+	name = "super duper shotgun"
+	desc = "bang-bang-bang-bang-bang-bang-bang-bang-bang-bang-bang-bang-bang-bang-bang-bang-bang-bang-bang-bang, click, tack, shoomph, click"
+	icon_state = "superdupershotgun"
+	item_state = "sawnshotgun"
+	fire_sound = 'sound/weapons/supershotgun_fire.ogg'
+	reloadsound = 'sound/weapons/supershotgun_load.ogg'
+	empty_sound = 'sound/weapons/supershotgun_open.ogg'
+	fire_delay = 0
+	max_shells = 20
+
+/obj/item/weapon/gun/projectile/shotgun/doublebarrel/superduper/Fire(atom/target, mob/living/user, params, reflex = 0, struggle = 0, var/use_shooter_turf = FALSE)
+	if(..())
+		for(var/i = 0; i < 19; i++)
+			..()
 		attack_self(user)
 
 /obj/item/weapon/gun/projectile/shotgun/nt12

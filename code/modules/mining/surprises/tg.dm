@@ -143,7 +143,7 @@
 		/obj/item/weapon/stock_parts/manipulator/nano/pico/femto=3,
 		/obj/item/weapon/stock_parts/scanning_module/adv/phasic/bluespace=3,
 		/obj/item/weapon/stock_parts/matter_bin/adv/super/bluespace=3,
-		/obj/item/weapon/stock_parts/console_screen/reinforced/plasma/rplasma=3,
+//		/obj/item/weapon/stock_parts/console_screen/reinforced/plasma/rplasma=3,
 		/obj/item/device/pda/clear=1
 	)
 
@@ -173,7 +173,7 @@
 	room_size_max=7
 
 	spawntypes = list(
-		/obj/item/weapon/gun/energy/floragun=1,
+		/obj/item/floral_somatoray=1,
 		//obj/item/seeds/novaflowerseed=2,
 		/obj/item/seeds/bluespacetomatoseed=2,
 		// /vg/:

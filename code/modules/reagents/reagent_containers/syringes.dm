@@ -45,6 +45,7 @@
 	return(SUICIDE_ACT_OXYLOSS)
 
 /obj/item/weapon/reagent_containers/syringe/on_reagent_change()
+	..()
 	update_icon()
 
 /obj/item/weapon/reagent_containers/syringe/pickup(mob/user)
@@ -285,9 +286,10 @@
 		target.take_organ_damage(3)// 7 is the same as crowbar punch
 
 	// Break the syringe and transfer some of the reagents to the target
-	var/syringestab_amount_transferred = max(rand(min(reagents.total_volume, 2), (reagents.total_volume - 5)), 0) //nerfed by popular demand.
-	src.reagents.reaction(target, INGEST, amount_override = min(reagents.total_volume,syringestab_amount_transferred)/(reagents.reagent_list.len))
-	src.reagents.trans_to(target, syringestab_amount_transferred)
+	if(reagents.reagent_list.len)
+		var/syringestab_amount_transferred = max(rand(min(reagents.total_volume, 2), (reagents.total_volume - 5)), 0) //nerfed by popular demand.
+		src.reagents.reaction(target, INGEST, amount_override = min(reagents.total_volume,syringestab_amount_transferred)/(reagents.reagent_list.len))
+		src.reagents.trans_to(target, syringestab_amount_transferred)
 	src.desc += " It is broken."
 	src.mode = SYRINGE_BROKEN
 	src.add_blood(target)
@@ -405,6 +407,15 @@
 	reagents.add_reagent(CYANIDE, 5)
 	reagents.add_reagent(CHLORALHYDRATE, 5)
 	reagents.add_reagent(LEXORIN, 5)
+	mode = SYRINGE_INJECT
+	update_icon()
+
+/obj/item/weapon/reagent_containers/syringe/nitrogen
+	name = "syringe (nitrogen)"
+	desc = "Contains nitrogen - used to stabilize vox."
+/obj/item/weapon/reagent_containers/syringe/nitrogen/New()
+	..()
+	reagents.add_reagent(NITROGEN, 15)
 	mode = SYRINGE_INJECT
 	update_icon()
 

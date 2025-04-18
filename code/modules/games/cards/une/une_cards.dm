@@ -47,7 +47,7 @@
 
 /obj/item/toy/singlecard/une
 	name = "une card"
-	desc = "\a card."
+	desc = "A card."
 	icon = 'icons/obj/une_cards.dmi'
 	icon_state = "unecard_down"
 	var/image/unecardimg
@@ -63,12 +63,10 @@
 		icon_state = "unecard_down"
 		overlays -= unecardimg
 		name = "une card"
-		pixel_x = -5
 	else
 		icon_state = "unecard_up"
 		overlays += unecardimg
 		name = cardname
-		pixel_x = 5
 
 
 #undef REDCARD

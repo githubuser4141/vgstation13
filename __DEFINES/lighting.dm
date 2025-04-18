@@ -13,7 +13,7 @@
 
 #define LIGHTING_ICON 'icons/effects/lighting_overlay.dmi' // icon used for lighting shading effects
 
-#define LIGHTING_SOFT_THRESHOLD 0.05 // If the max of the lighting lumcounts of each spectrum drops below this, disable luminosity on the lighting overlays.
+#define LIGHTING_SOFT_THRESHOLD 0.005 // If the max of the lighting lumcounts of each spectrum drops below this, disable luminosity on the lighting overlays.
 
 // If I were you I'd leave this alone.
 #define LIGHTING_BASE_MATRIX \
@@ -54,6 +54,12 @@
 #define LIGHT_COLOR_GREEN      "#64C864" //Bright but quickly dissipating neon green. rgb(100, 200, 100)
 #define LIGHT_COLOR_BLUE       "#6496FA" //Cold, diluted blue. rgb(100, 150, 250)
 
+#define LIGHT_COLOR_APC_RED		"#F86060"
+#define LIGHT_COLOR_APC_YELLOW	"#DCDC28"
+#define LIGHT_COLOR_APC_GREEN	"#82FF4C"
+#define LIGHT_COLOR_APC_BLUE	"#0026FF"
+#define LIGHT_COLOR_APC_SHUNT	"#F87370"
+
 #define LIGHT_COLOR_CYAN       "#7DE1E1" //Diluted cyan. rgb(125, 225, 225)
 #define LIGHT_COLOR_PINK       "#E17DE1" //Diluted, mid-warmth pink. rgb(225, 125, 225)
 #define LIGHT_COLOR_YELLOW     "#E1E17D" //Dimmed yellow, leaning kaki. rgb(225, 225, 125)
@@ -73,3 +79,19 @@
 #define LIGHT_EMPTY  1
 #define LIGHT_BROKEN 2
 #define LIGHT_BURNED 3
+
+#define FOR_DVIEW(type, range, center, invis_flags) \
+	dview_mob.loc = center; \
+	dview_mob.see_invisible = invis_flags; \
+	for(type in view(range, dview_mob))
+
+#define END_FOR_DVIEW dview_mob.loc = null
+
+// Alpha levels
+
+#define MINIMUM_ALPHA_DARK_PLANE 255
+#define HUMAN_TARGET_ALPHA 20
+
+#define SUNGLASSES_TARGET_ALPHA 5
+
+#define LIGHTING_PLANEMASTER_COLOR list(null,null,null,"#0000","#000F")

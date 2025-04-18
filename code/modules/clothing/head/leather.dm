@@ -10,6 +10,7 @@
 	heat_conductivity = SNOWGEAR_HEAT_CONDUCTIVITY
 	siemens_coefficient = 0.6
 
+
 /obj/item/clothing/head/leather/attackby(obj/W, mob/user)
 	if(istype (W, /obj/item/stack/sheet/animalhide))
 		var/obj/item/stack/sheet/animalhide/S = W

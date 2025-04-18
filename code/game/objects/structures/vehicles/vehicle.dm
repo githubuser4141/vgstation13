@@ -105,8 +105,7 @@
 		mykey.paired_to = null
 		mykey = null
 	if(heldkey)
-		qdel(heldkey)
-		heldkey = null
+		QDEL_NULL(heldkey)
 	..()
 
 /obj/structure/bed/chair/vehicle/proc/set_keys()
@@ -131,15 +130,16 @@
 		else
 			to_chat(user, "Need more welding fuel!")
 			return
-	else if(istype(W, /obj/item/key))
+	else if((W.arcanetampered && W.is_screwdriver(user)) || (!W.arcanetampered && istype(W, /obj/item/key)))
 		if(!heldkey)
 			if(keytype)
-				if(!istype(W, keytype))
-					to_chat(user, "<span class='warning'>\The [W] doesn't fit into \the [src]'s ignition.</span>")
-					return
-				if(mykey && mykey != W)
-					to_chat(user, "<span class='warning'>\The [src] is paired to a different key.</span>")
-					return
+				if(!W.arcanetampered)
+					if(!istype(W, keytype))
+						to_chat(user, "<span class='warning'>\The [W] doesn't fit into \the [src]'s ignition.</span>")
+						return
+					if(mykey && mykey != W)
+						to_chat(user, "<span class='warning'>\The [src] is paired to a different key.</span>")
+						return
 				if(((M_CLUMSY in user.mutations) || user.getBrainLoss() >= 60) && prob(50))
 					to_chat(user, "<span class='warning'>You try to insert \the [W] to \the [src]'s ignition but you miss the slot!</span>")
 					return
@@ -154,7 +154,7 @@
 				to_chat(user, "<span class='notice'>You don't need a key.</span>")
 		else
 			to_chat(user, "<span class='notice'>\The [src] already has \the [heldkey] in it.</span>")
-	else if(W.is_screwdriver(user) && !heldkey)
+	else if(((W.arcanetampered && istype(W, /obj/item/key)) || (!W.arcanetampered && W.is_screwdriver(user))) && !heldkey)
 		var/mob/living/carbon/human/H = user
 		to_chat(user, "<span class='warning'>You jam \the [W] into \the [src]'s ignition and feel like a genius as you try turning it!</span>")
 		playsound(src, "sound/items/screwdriver.ogg", 10, 1)
@@ -170,7 +170,6 @@
 	if(heldkey && !user.incapacitated() && Adjacent(user) && user.dexterity_check())
 		to_chat(user, "<span class='notice'>You remove \the [heldkey] from \the [src]'s ignition.</span>")
 		user.visible_message("<span class='notice'>\The [src]'s engine shuts off.</span>")
-		heldkey.forceMove(get_turf(user))
 		user.put_in_hands(heldkey)
 		heldkey = null
 	else
@@ -185,6 +184,7 @@
 
 
 /obj/structure/bed/chair/vehicle/relaymove(var/mob/living/user, direction)
+	..()
 	if(user.incapacitated())
 		unlock_atom(user)
 		return
@@ -359,7 +359,7 @@
 /obj/structure/bed/chair/vehicle/bullet_act(var/obj/item/projectile/Proj)
 	var/hitrider = 0
 	if(istype(Proj, /obj/item/projectile/ion))
-		Proj.on_hit(src, 2)
+		Proj.on_hit(src, 100)
 		return
 
 	if(occupant)

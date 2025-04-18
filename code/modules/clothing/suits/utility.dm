@@ -18,12 +18,14 @@
 	w_class = W_CLASS_LARGE//bulky item
 	gas_transfer_coefficient = 0.90
 	permeability_coefficient = 0.50
-	body_parts_covered = ARMS|LEGS|FULL_TORSO|FEET|HANDS
-	allowed = list(/obj/item/device/flashlight,/obj/item/weapon/tank/emergency_oxygen,/obj/item/weapon/tank/emergency_nitrogen,/obj/item/weapon/extinguisher)
+	body_parts_covered = ARMS|LEGS|FULL_TORSO|FEET|HANDS|HIDETAIL
+	allowed = list(/obj/item/device/flashlight,/obj/item/weapon/tank/emergency_oxygen,/obj/item/weapon/tank/emergency_nitrogen,/obj/item/weapon/extinguisher,/obj/item/tool/irons,/obj/item/tool/crowbar/halligan)
 	slowdown = HARDSUIT_SLOWDOWN_LOW
 	clothing_flags = ONESIZEFITSALL
 	pressure_resistance = 3 * ONE_ATMOSPHERE
 	max_heat_protection_temperature = FIRESUIT_MAX_HEAT_PROTECTION_TEMPERATURE
+	species_fit = list(VOX_SHAPED)
+	flammable = FALSE
 
 
 /obj/item/clothing/suit/fire/firefighter
@@ -69,6 +71,8 @@
 	siemens_coefficient = 0
 	species_fit = list(VOX_SHAPED, INSECT_SHAPED)
 
+	on_armory_manifest = TRUE
+
 /obj/item/clothing/suit/bomb_suit
 	name = "bomb suit"
 	desc = "A suit designed for safety when handling explosives."
@@ -78,11 +82,13 @@
 	gas_transfer_coefficient = 0.01
 	permeability_coefficient = 0.01
 	flags = FPRINT
+	body_parts_covered = ARMS|LEGS|FULL_TORSO|HIDETAIL
 	slowdown = HARDSUIT_SLOWDOWN_HIGH
 	armor = list(melee = 0, bullet = 0, laser = 0,energy = 0, bomb = 100, bio = 0, rad = 0)
 	max_heat_protection_temperature = ARMOR_MAX_HEAT_PROTECTION_TEMPERATURE
 	siemens_coefficient = 0
 	species_fit = list(VOX_SHAPED, INSECT_SHAPED)
+	on_armory_manifest = TRUE
 
 /obj/item/clothing/head/bomb_hood/security
 	icon_state = "bombsuitsec"
@@ -107,6 +113,7 @@
 	siemens_coefficient = 0
 
 
+
 /obj/item/clothing/suit/advancedeod
 	name = "Advanced EOD Suit"
 	desc = "A heavy suit designed for heavy protection."
@@ -123,6 +130,7 @@
 	species_fit = list(INSECT_SHAPED)
 	species_restricted = list("exclude",VOX_SHAPED)
 	siemens_coefficient = 0
+	clothing_flags = ONESIZEFITSALL
 
 /*
  * Radiation protection
@@ -137,6 +145,7 @@
 	species_fit = list(VOX_SHAPED, INSECT_SHAPED)
 	body_parts_visible_override = EYES|BEARD
 
+
 /obj/item/clothing/suit/radiation
 	name = "radiation suit"
 	desc = "A suit that protects against radiation. Label: Made with lead, do not eat insulation."
@@ -145,9 +154,10 @@
 	w_class = W_CLASS_LARGE//bulky item
 	gas_transfer_coefficient = 0.90
 	permeability_coefficient = 0.50
-	body_parts_covered = FULL_BODY
+	body_parts_covered = FULL_BODY|HIDETAIL
 	allowed = list(/obj/item/device/flashlight,/obj/item/weapon/tank/emergency_oxygen,/obj/item/weapon/tank/emergency_nitrogen)
 	slowdown = 1.5
 	armor = list(melee = 0, bullet = 0, laser = 0,energy = 0, bomb = 0, bio = 60, rad = 100)
 	species_fit = list(VOX_SHAPED, INSECT_SHAPED)
 	clothing_flags = ONESIZEFITSALL
+

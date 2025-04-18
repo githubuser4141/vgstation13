@@ -32,7 +32,7 @@
 	if(spell_masters && spell_masters.len)
 		for(var/obj/abstract/screen/movable/spell_master/spell_master in spell_masters)
 			spell_master.update_spells(0, src)
-	
+
 	if(locked_to_z)
 		check_locked_zlevel()
 
@@ -91,7 +91,7 @@
 	if(!isDead()) //Alive.
 		blinded = !(paralysis || is_component_functioning("camera"))
 		stat = !(paralysis || stunned || knockdown) ? CONSCIOUS : UNCONSCIOUS
-	else //Dead.
+	else if(!(status_flags & BUDDHAMODE)) //Dead.
 		blinded = TRUE
 		stat = DEAD
 
@@ -111,6 +111,8 @@
 		ear_damage = max(ear_damage-0.05, 0)
 	if((sdisabilities & DEAF))
 		ear_deaf = TRUE
+	if(say_mute)
+		say_mute = max(say_mute-1, 0)
 
 	if(eye_blurry)
 		eye_blurry = max(eye_blurry-1,0)
@@ -133,7 +135,7 @@
 
 /mob/living/silicon/robot/proc/handle_sensor_modes()
 	change_sight(removing = SEE_TURFS|SEE_MOBS|SEE_OBJS|BLIND)
-	see_invisible = SEE_INVISIBLE_LEVEL_TWO
+	see_invisible = SEE_INVISIBLE_LEVEL_ONE
 	see_in_dark = 8
 
 	if(client)
@@ -142,23 +144,6 @@
 	if(isDead())
 		change_sight(adding = SEE_TURFS|SEE_MOBS|SEE_OBJS)
 		return
-
-	switch(sensor_mode)
-		if(NIGHT)
-			if(client)
-				client.color = list(0.33,0.33,0.33,0,
-									0.33,0.33,0.33,0,
-			 						0.33,0.33,0.33,0,
-				 					0,0,0,1,
-				 					-0.2,0,-0.2,0)
-			see_invisible = SEE_INVISIBLE_MINIMUM
-		if(MESON_VISION)
-			change_sight(adding = SEE_TURFS)
-			see_invisible = SEE_INVISIBLE_MINIMUM
-		if(THERMAL_VISION)
-			change_sight(adding = SEE_MOBS)
-			see_invisible = SEE_INVISIBLE_MINIMUM
-			see_in_dark = 4
 
 /mob/living/silicon/robot/proc/process_killswitch()
 	if(scrambledcodes)
@@ -180,21 +165,22 @@
 /mob/living/silicon/robot/fire_act(datum/gas_mixture/air, exposed_temperature, exposed_volume)
 	if(!module)
 		..()
-		return
-	if(module && locate(/obj/item/borg/fire_shield, module.modules))
+	if(locate(/obj/item/borg/fire_shield, module.modules))
 		return
 	..()
 
 //Robots on fire
 /mob/living/silicon/robot/handle_fire()
-	if(..())
+	if(!module)
+		return
+	if(..() || locate(/obj/item/borg/fire_shield, module.modules))
 		return
 	adjustFireLoss(3)
 
 /mob/living/silicon/robot/update_fire()
-	overlays -= image("icon"='icons/mob/OnFire.dmi', "icon_state"="Standing")
+	overlays -= mutable_appearance(icon='icons/mob/OnFire.dmi', icon_state="Standing")
 	if(on_fire)
-		overlays += image("icon"='icons/mob/OnFire.dmi', "icon_state"="Standing")
+		overlays += mutable_appearance(icon='icons/mob/OnFire.dmi', icon_state="Standing")
 	update_icons()
 
 /mob/living/silicon/robot/update_canmove()
@@ -212,6 +198,5 @@
 		to_chat(src, "<span class='userdanger'>Your hardware detects that you have left your intended location. Initiating self-destruct.</span>")
 		spawn(rand(2,7) SECONDS)
 			if(mmi) //no sneaking brains away
-				qdel(mmi)
-				mmi = null
+				QDEL_NULL(mmi)
 			gib()

@@ -18,7 +18,7 @@
 /datum/surgery_step/internal/remove_embryo
 	allowed_tools = list(
 		/obj/item/tool/hemostat = 100,
-		/obj/item/tool/wirecutters = 75,
+		"wirecutters" = 75,
 		/obj/item/weapon/kitchen/utensil/fork = 20,
 		)
 	blood_level = 2
@@ -161,7 +161,7 @@
 	allowed_tools = list(
 		/obj/item/stack/nanopaste = 100,
 		/obj/item/tool/bonegel = 30,
-		/obj/item/tool/screwdriver = 70,
+		"screwdriver" = 70,
 		)
 
 	duration = 7 SECONDS
@@ -237,7 +237,7 @@
 
 
 //////DETACH ORGAN////
-/datum/surgery_step/internal/detatch_organ/tool_quality(obj/item/tool)
+/datum/surgery_step/internal/detatch_organ/tool_quality(obj/item/tool, mob/living/user)
 	. = ..()
 	if(!tool.is_sharp())
 		return 0
@@ -306,7 +306,7 @@
 
 	allowed_tools = list(
 		/obj/item/tool/hemostat = 100,
-		/obj/item/tool/wirecutters = 75,
+		"wirecutters" = 75,
 		/obj/item/weapon/kitchen/utensil/fork = 20,
 		)
 
@@ -396,7 +396,7 @@
 		if(!target.internal_organs_by_name[O.organ_tag])
 			organ_missing = 1
 		else
-			to_chat(user, "<span class='warning'>\The [target] already has [o_a][O.organ_tag].</span>")
+			to_chat(user, "<span class='warning'>\The [target] already has [o_a] [O.organ_tag].</span>")
 			return 0
 
 		if(O.organ_data && affected.name == O.organ_data.parent_organ && affected.destspawn == 0)

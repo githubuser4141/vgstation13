@@ -12,6 +12,8 @@
 	actions_types = list(/datum/action/item_action/toggle_light)
 	siemens_coefficient = 0.9
 	species_fit = list (VOX_SHAPED, INSECT_SHAPED)
+	flammable = FALSE
+
 
 /obj/item/clothing/head/hardhat/attack_self(mob/user)
 	on = !on

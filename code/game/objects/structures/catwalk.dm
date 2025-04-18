@@ -9,26 +9,13 @@
 	layer = CATWALK_LAYER
 
 /obj/structure/catwalk/canSmoothWith()
-	var/static/list/smoothables = list(/obj/structure/catwalk)
-	return smoothables
-
-/obj/structure/catwalk/New(loc)
-
-	..(loc)
-
-	relativewall()
-	relativewall_neighbours()
+	return 1
 
 /obj/structure/catwalk/relativewall()
-
-	var/junction = findSmoothingNeighbors()
-	icon_state = "catwalk[junction]"
+	icon_state = "catwalk[..()]"
 
 /obj/structure/catwalk/isSmoothableNeighbor(atom/A)
-
-	if(istype(A, /turf/space))
-		return 0
-	return ..()
+	return !istype(A, /turf/space) && istype(A, /obj/structure/catwalk)
 
 /obj/structure/catwalk/ex_act(severity)
 	switch(severity)

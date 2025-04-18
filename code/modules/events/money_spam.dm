@@ -55,11 +55,11 @@
 				if(3)
 					sender = pick("Galactic Payments Association", "Better Business Bureau", "Tau Ceti E-Payments", "Nanotrasen Finance Department", "Luxury Replicas")
 					message = pick("Luxury watches for Blowout sale prices!", \
-					"Watches, Jewelry & Accessories, Bags & Wallets !", \
+					"Watches, Jewelry & Accessories, Bags & Wallets!", \
 					"Deposit 100$ and get 300$ totally free!", \
 					" 100K NT.|WOWGOLD �nly $89            <HOT>", \
 					"We have been filed with a complaint from one of your customers in respect of their business relations with you.", \
-					"We kindly ask you to open the COMPLAINT REPORT (attached) to reply on this complaint..")
+					"We kindly ask you to open the COMPLAINT REPORT (attached) to reply on this complaint.")
 				if(4)
 					sender = pick("Buy Dr. Maxman", "Having dysfuctional troubles?")
 					message = pick("DR MAXMAN: REAL Doctors, REAL Science, REAL Results!", \
@@ -73,7 +73,7 @@
 					"We are happy to inform you that due to the delay, we have been instructed to IMMEDIATELY deposit all funds into your account", \
 					"Dear fund beneficiary, We have please to inform you that overdue funds payment has finally been approved and released for payment", \
 					"Due to my lack of agents I require an off-world financial account to immediately deposit the sum of 1 POINT FIVE MILLION credits.", \
-					"Greetings sir, I regretfully to inform you that as I lay dying here due to my lack ofheirs I have chosen you to recieve the full sum of my lifetime savings of 1.5 billion credits")
+					"Greetings sir, I regretfully to inform you that as I lay dying here due to my lack ofheirs I have chosen you to receive the full sum of my lifetime savings of 1.5 billion credits")
 				if(6)
 					sender = pick("Nanotrasen Morale Divison", "Feeling Lonely?", "Bored?", "www.wetskrell.nt")
 					message = pick("The Nanotrasen Morale Division wishes to provide you with quality entertainment sites.", \

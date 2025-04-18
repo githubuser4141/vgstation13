@@ -8,6 +8,8 @@
 	siemens_coefficient = 1
 	force = 3
 	w_class = W_CLASS_SMALL
+	sharpness = 0
+	sharpness_flags = 0
 	var/deploy_sound = "sound/weapons/switchblade.ogg"
 	var/undeploy_sound = "sound/weapons/switchblade.ogg"
 	throwforce = 6.0
@@ -19,6 +21,7 @@
 	origin_tech = Tc_MATERIALS + "=5;" + Tc_BLUESPACE + "=3"
 	var/hmodule = null
 	var/index = 0
+	var/fakename = ""
 
 	//the colon separates the typepath from the name
 	var/list/obj/item/stored_modules = list("/obj/item/tool/screwdriver:screwdriver" = null,
@@ -28,13 +31,13 @@
 											"/obj/item/weapon/chisel:chisel" = null,
 											"/obj/item/device/multitool:multitool" = null)
 	var/obj/item/deployed //what's currently in use
-	var/removing_item = /obj/item/tool/screwdriver //the type of item that lets you take tools out
+	var/can_remove_items = TRUE //if you can remove items with a screwdriver
 
 /obj/item/weapon/switchtool/preattack(atom/target, mob/user, proximity_flag, click_parameters)
-	if(istype(target, /obj/item/weapon/storage)) //we place automatically
+	if(istype(target, /obj/item/weapon/storage) && !istype(target, /obj/item/weapon/storage/pill_bottle)) //we place automatically, but want pill bottles to be meltable
 		return
 	if(deployed)
-		if(!deployed.preattack(target, user))
+		if(!deployed.preattack(target, user, proximity_flag, click_parameters))
 			if(proximity_flag)
 				target.attackby(deployed, user)
 			deployed.afterattack(target, user, proximity_flag, click_parameters)
@@ -82,13 +85,13 @@
 
 	if(deployed)
 		edit_deploy(0)
-		to_chat(user, "You store \the [deployed].")
+		to_chat(user, "You store \the [arcanetampered ? fakename : deployed].")
 		undeploy(user)
 	else
 		choose_deploy(user)
 
 /obj/item/weapon/switchtool/attackby(var/obj/item/used_item, mob/user)
-	if(istype(used_item, removing_item)) //if it's the thing that lets us remove tools and we have something to remove
+	if(can_remove_items && used_item.is_screwdriver(user)) //if it's the thing that lets us remove tools and we have something to remove
 		var/no_modules = TRUE
 		for(var/module in stored_modules)
 			if(stored_modules[module])
@@ -113,11 +116,11 @@
 		else
 			index--
 		if (index > stored_modules.len)
-			index = 0
-		if(index < 0)
+			index = 1
+		if(index < 1)
 			index = stored_modules.len
 		var/moduled = stored_modules[index]
-		undeploy()
+		undeploy(user)
 		deploy(moduled, user)
 		edit_deploy(1)
 
@@ -165,7 +168,7 @@
 		if(stored_modules[module] == deployed)
 			stored_modules[module] = null
 			break
-	to_chat(user, "You successfully remove \the [deployed] from \the [src].")
+	to_chat(user, "You successfully remove \the [arcanetampered ? fakename : deployed] from \the [src].")
 	playsound(src, "sound/items/screwdriver.ogg", 10, 1)
 	undeploy(user)
 	return TRUE
@@ -189,6 +192,8 @@
 
 /obj/item/weapon/switchtool/proc/undeploy(mob/user)
 	playsound(src, undeploy_sound, 10, 1)
+	deploy_sound = initial(deploy_sound)
+	undeploy_sound = initial(undeploy_sound)
 	edit_deploy(0)
 	deployed = null
 	overlays.len = 0
@@ -198,14 +203,17 @@
 	user.update_inv_hands()
 
 /obj/item/weapon/switchtool/proc/deploy(var/module, mob/user)
+	if(arcanetampered)
+		module = pick(stored_modules)
 	if(!(module in stored_modules))
 		return FALSE
 	if(!stored_modules[module])
 		return FALSE
 	if(deployed)
 		return FALSE
-	playsound(src, deploy_sound, 10, 1)
 	deployed = stored_modules[module]
+	if(arcanetampered)
+		module = pick(stored_modules)
 	hmodule = get_module_name(module)
 	var/image/inhand_overlayr = image('icons/mob/in-hand/right/switchtool.dmi', src, "[hmodule]")
 	var/image/inhand_overlayl = image('icons/mob/in-hand/left/switchtool.dmi', src, "[hmodule]")
@@ -215,18 +223,28 @@
 	dynamic_overlay["[HAND_LAYER]-[GRASP_RIGHT_HAND]"] = inhand_overlayr
 	dynamic_overlay["[HAND_LAYER]-[GRASP_LEFT_HAND]"] = inhand_overlayl
 	user.update_inv_hands()
+	if(arcanetampered)
+		module = pick(stored_modules)
+		fakename = "[stored_modules[module]]"
+	edit_deploy(1)
+	playsound(src, deploy_sound, 10, 1)
 	return TRUE
 
 /obj/item/weapon/switchtool/proc/edit_deploy(var/doedit)
+	if(!deployed)
+		return
 	if(doedit) //Makes the deployed item take on the features of the switchtool for attack animations and text. Other bandaid fixes for snowflake issues can go here.
 		sharpness = deployed.sharpness
+		sharpness_flags = deployed.sharpness_flags
 		deployed.name = name
 		deployed.icon = icon
 		//deployed.icon_state = icon_state
 		deployed.overlays = overlays
 		deployed.cant_drop = TRUE
-	else //Revert the changes to the deployed item.
+	//Revert the changes to the deployed item.
+	else
 		sharpness = initial(sharpness)
+		sharpness_flags = initial(sharpness_flags)
 		deployed.name = initial(deployed.name)
 		deployed.icon = initial(deployed.icon)
 		deployed.icon_state = initial(deployed.icon_state)
@@ -250,7 +268,6 @@
 		for(var/m in stored_modules)
 			if(stored_modules[m])
 				deploy(m,user)
-				edit_deploy(1)
 				return TRUE
 		return
 
@@ -268,8 +285,7 @@
 					true_module = checkmodule
 					break
 			if(deploy(true_module,user))
-				to_chat(user, "You deploy \the [deployed].")
-				edit_deploy(1)
+				to_chat(user, "You deploy \the [arcanetampered ? fakename : deployed].")
 			return TRUE
 		return
 
@@ -317,7 +333,8 @@
 	dynamic_overlay.len = 0
 	w_class = initial(w_class)
 	update_icon()
-	user.update_inv_hands()
+	if(user)
+		user.update_inv_hands()
 
 /obj/item/weapon/switchtool/swiss_army_knife
 	name = "swiss army knife"
@@ -335,30 +352,54 @@
 						"/obj/item/weapon/kitchen/utensil/fork:fork" = null,
 						"/obj/item/weapon/hatchet/metalhandle:hatchet" = null,
 						"/obj/item/weapon/lighter/zippo:Zippo lighter" = null,
-						"/obj/item/weapon/match/strike_anywhere:strike-anywhere match" = null,
+						"/obj/item/weapon/match/strike_anywhere/s_a_k:strike-anywhere match" = null,
 						"/obj/item/weapon/pen:pen" = null)
 
-/obj/item/weapon/switchtool/swiss_army_knife/undeploy()
-	if(istype(deployed, /obj/item/weapon/lighter))
-		var/obj/item/weapon/lighter/lighter = deployed
-		lighter.lit = 0
+
+/obj/item/weapon/switchtool/swiss_army_knife/edit_deploy(var/doedit)
 	..()
+	if(!deployed)
+		return
+	if(doedit)
+		if(istype(deployed, /obj/item/weapon/lighter/zippo))
+			var/obj/item/weapon/lighter/lighter = deployed
+			lighter.lit = 1
+			processing_objects.Add(deployed)
+			light_color = LIGHT_COLOR_FIRE
+			set_light(lighter.brightness_on)
+			deploy_sound = 'sound/items/zippo_open.ogg'
+			undeploy_sound = 'sound/items/zippo_close.ogg'
+	else
+		if(istype(deployed, /obj/item/weapon/lighter/zippo))
+			var/obj/item/weapon/lighter/lighter = deployed
+			lighter.lit = 0
+			processing_objects.Remove(deployed)
+			set_light(0)
+			light_color = initial(light_color)
+		if(istype(deployed, /obj/item/weapon/match/strike_anywhere))
+			var/obj/item/weapon/match/strike_anywhere/match = deployed
+			match.lit = 0
+			processing_objects.Remove(deployed)
+			set_light(0)
+			light_color = initial(light_color)
 
-/obj/item/weapon/switchtool/swiss_army_knife/deploy(var/module,mob/user)
-	..()
-	if(istype(deployed, /obj/item/weapon/lighter))
-		var/obj/item/weapon/lighter/lighter = deployed
-		lighter.lit = 1
-		..()
-
-/obj/item/weapon/switchtool/swiss_army_knife/choose_deploy(mob/user)
+/obj/item/weapon/switchtool/swiss_army_knife/preattack(atom/target, mob/user, proximity_flag, click_parameters)
 	. = ..()
-	if(. && deployed)
-		sharpness_flags = deployed.sharpness_flags
-
-/obj/item/weapon/switchtool/swiss_army_knife/undeploy(mob/user)
-	. = ..()
-	sharpness_flags = 0
+	if (. && istype(deployed, /obj/item/weapon/match/strike_anywhere))
+		var/obj/item/weapon/match/strike_anywhere/match = deployed
+		if (match.lit && (hmodule != "strike-anywhere match_lit"))
+			overlays.len = 0
+			hmodule = "strike-anywhere match_lit"
+			var/image/inhand_overlayr = image('icons/mob/in-hand/right/switchtool.dmi', src, "[hmodule]")
+			var/image/inhand_overlayl = image('icons/mob/in-hand/left/switchtool.dmi', src, "[hmodule]")
+			overlays += hmodule
+			update_icon()
+			dynamic_overlay["[HAND_LAYER]-[GRASP_RIGHT_HAND]"] = inhand_overlayr
+			dynamic_overlay["[HAND_LAYER]-[GRASP_LEFT_HAND]"] = inhand_overlayl
+			user.update_inv_hands()
+			processing_objects.Add(match)
+			light_color = LIGHT_COLOR_FIRE
+			set_light(match.brightness_on)
 
 /obj/item/weapon/switchtool/switchblade
 	name = "switchblade"
@@ -388,7 +429,7 @@
 	undeploy_sound = "sound/weapons/switchsound.ogg"
 	light_color =  LIGHT_COLOR_CYAN
 	mech_flags = MECH_SCAN_ILLEGAL
-	removing_item = null
+	can_remove_items = FALSE
 	var/has_tech = 0
 	var/hcolor = "CYAN"
 	starting_materials = null

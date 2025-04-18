@@ -1,6 +1,12 @@
 /obj/structure
 	icon = 'icons/obj/structures.dmi'
 	penetration_dampening = 5
+	var/hasbolts = FALSE
+
+/obj/structure/examine(mob/user)
+	..()
+	if(hasbolts)
+		to_chat(user,"<span class='info'>This one is bolted into place.</span>")
 
 /obj/structure/blob_act(var/destroy = 0)
 	..()
@@ -50,5 +56,19 @@
 					sleep(3)
 	if(material_type)
 		material_type.on_use(H,src,null)
+
+	if(arcanetampered && density && anchored)
+		to_chat(H,"<span class='sinister'>[src] kicks YOU!</span>")
+		playsound(src, 'sound/effects/grillehit.ogg', 50, 1) //Zth: I couldn't find a proper sound, please replace it
+		H.Knockdown(10)
+		H.Stun(10)
+
 /obj/structure/animationBolt(var/mob/firer)
 	new /mob/living/simple_animal/hostile/mimic/copy(loc, src, firer, duration=SPELL_ANIMATION_TTL)
+
+/obj/structure/Bumped(var/atom/A)
+	if(istype(A,/obj/effect/foam/fire) || istype(A,/obj/effect/water)) //snowflaked until clean_act is updated to affect dense objects (probably never)
+		extinguish()
+		var/turf/T = get_turf(src)
+		T.extinguish()
+	..()

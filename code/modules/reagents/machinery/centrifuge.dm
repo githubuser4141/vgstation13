@@ -8,11 +8,14 @@
 	var/list/cans = new/list() //These are the empty containers.
 	var/obj/item/weapon/reagent_containers/beaker = null // This is the active container
 
+/obj/structure/centrifuge/splashable()
+	return FALSE
+
 /obj/structure/centrifuge/examine(mob/user)
 	..()
 	to_chat(user, "<span class='info'>It contains [cans.len] empty containers[beaker ? " and an active container!" : "."]</span>")
 
-/obj/structure/centrifuge/attackby(obj/item/weapon/reagent_containers/W as obj, mob/user as mob)
+/obj/structure/centrifuge/attackby(var/obj/item/W, var/mob/user)
 	if(iscrowbar(W))
 		var/obj/structure/toilet/T = new /obj/structure/toilet(src.loc)
 		T.open = 1

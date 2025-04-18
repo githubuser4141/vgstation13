@@ -80,6 +80,12 @@
 	canister_color = "grey"
 	can_label = 0
 
+/obj/machinery/portable_atmospherics/canister/radon //for testing (or admin shittery)
+	name = "Canister \[Rn\]"
+	icon_state = "green"
+	canister_color = "green"
+	can_label = 0
+
 /obj/machinery/portable_atmospherics/canister/update_icon()
 	if(destroyed)
 		icon_state = "[canister_color]-1"
@@ -192,7 +198,7 @@
 	if(valve_open)
 		var/datum/gas_mixture/environment
 		var/transfer_vol //A band-aid fix for the fact the equation used below doesn't work as intended
-		if(holding)
+		if(holding && !arcanetampered)
 			environment = holding.air_contents
 			transfer_vol = holding.volume
 		else
@@ -210,12 +216,18 @@
 			//Actually transfer the gas
 			var/datum/gas_mixture/removed = air_contents.remove(transfer_moles)
 
-			if(holding)
+			if(holding && !arcanetampered)
 				environment.merge(removed)
 			else
 				loc.assume_air(removed)
 			src.update_icon()
 		nanomanager.update_uis(src)
+
+		//Updating the pipenet if we're on a connector
+		if (connected_port)
+			var/datum/pipe_network/P = connected_port.return_network(src)
+			if (P)
+				P.update = 1
 
 	if(air_contents.return_pressure() < 1)
 		can_label = 1
@@ -346,34 +358,34 @@
 		return .
 
 	if(href_list["toggle"])
-		if (valve_open)
+		if (valve_open && !arcanetampered)
 			if (holding)
 				investigation_log(I_ATMOS, "had its valve <b>closed</b> by [key_name(usr)], stopping transfer into \the [holding].")
 			else
 				investigation_log(I_ATMOS, "had its valve <b>closed</b> by [key_name(usr)], stopping transfer into the <font color='red'><b>air</b></font>")
 		else
-			if (holding)
+			if (holding && !arcanetampered)
 				investigation_log(I_ATMOS, "had its valve <b>OPENED</b> by [key_name(usr)], starting transfer into \the [holding]")
 			else
 				var/naughty_stuff = air_contents.loggable_contents()
 				investigation_log(I_ATMOS, "had its valve <b>OPENED</b> by [key_name(usr)], starting transfer into the <font color='red'><b>air</b></font> ([naughty_stuff])")
 				if(naughty_stuff)
-					message_admins("[usr.real_name] ([formatPlayerPanel(usr,usr.ckey)]) opened a canister that contains [naughty_stuff] at [formatJumpTo(loc)]!")
-					log_admin("[usr]([ckey(usr.key)]) opened a canister that contains [naughty_stuff] at [loc.x], [loc.y], [loc.z]")
+					message_admins("[usr.real_name] ([formatPlayerPanel(usr,usr.ckey)]) opened a[arcanetampered ? "n arcane tampered" : ""] canister that contains [naughty_stuff] at [formatJumpTo(loc)]!")
+					log_admin("[usr]([ckey(usr.key)]) opened a[arcanetampered ? "n arcane tampered" : ""] canister that contains [naughty_stuff] at [loc.x], [loc.y], [loc.z]")
 
 		valve_open = !valve_open
 
 	if (href_list["remove_tank"])
 		if(holding)
-			if(valve_open)
+			if(valve_open || arcanetampered)
 				var/naughty_stuff = air_contents.loggable_contents()
 				if(naughty_stuff)
-					message_admins("[usr.real_name] ([formatPlayerPanel(usr,usr.ckey)]) opened a canister that contains [naughty_stuff] at [formatJumpTo(loc)]!")
-					log_admin("[usr]([ckey(usr.key)]) opened a canister that contains [naughty_stuff] at [loc.x], [loc.y], [loc.z]")
+					message_admins("[usr.real_name] ([formatPlayerPanel(usr,usr.ckey)]) opened a[arcanetampered ? "n arcane tampered" : ""] canister that contains [naughty_stuff] at [formatJumpTo(loc)]!")
+					log_admin("[usr]([ckey(usr.key)]) opened a[arcanetampered ? "n arcane tampered" : ""] canister that contains [naughty_stuff] at [loc.x], [loc.y], [loc.z]")
 
 			if(istype(holding, /obj/item/weapon/tank))
 				holding.manipulated_by = usr.real_name
-			holding.forceMove(loc)
+			usr.put_in_hands(holding)
 			holding = null
 
 	if (href_list["pressure_adj"])
@@ -393,6 +405,7 @@
 				"\[CO2\]" = "black", \
 				"\[Air\]" = "grey", \
 				"\[CAUTION\]" = "yellow", \
+				"\[Rn\]" = "green", \
 			)
 			var/label = input("Choose canister label", "Gas canister") as null|anything in colors
 			if (label)
@@ -438,6 +451,12 @@
 		GAS_OXYGEN, (O2STANDARD * maximum_pressure * filled) * air_contents.volume / (R_IDEAL_GAS_EQUATION * air_contents.temperature),
 		GAS_NITROGEN, (N2STANDARD * maximum_pressure * filled) * air_contents.volume / (R_IDEAL_GAS_EQUATION * air_contents.temperature))
 
+	update_icon()
+
+
+/obj/machinery/portable_atmospherics/canister/radon/New(loc)
+	..(loc)
+	air_contents.adjust_gas(GAS_RADON, (maximum_pressure * filled) * air_contents.volume / (R_IDEAL_GAS_EQUATION * air_contents.temperature))
 	update_icon()
 
 /obj/machinery/portable_atmospherics/canister/proc/weld(var/obj/item/tool/weldingtool/WT, var/mob/user)

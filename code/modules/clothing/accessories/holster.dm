@@ -5,6 +5,9 @@
 	origin_tech = Tc_COMBAT + "=2"
 	var/obj/item/holstered = null
 	accessory_exclusion = HOLSTER
+	w_type = RECYK_BIOLOGICAL //leather
+	flammable = TRUE
+	on_armory_manifest = TRUE
 	var/holster_verb_name = "Holster"
 
 /obj/item/clothing/accessory/holster/proc/can_holster(obj/item/weapon/gun/W)
@@ -22,14 +25,12 @@
 	if(user.attack_delayer.blocked())
 		return
 
-	if(user.drop_item(I, src))
+	if(user.drop_item(I, src, failmsg = TRUE))
 		holstered = I
 		holstered.add_fingerprint(user)
 		user.visible_message("<span class='notice'>[user] holsters \the [holstered].</span>", "<span class='notice'>You holster \the [holstered].</span>")
 		update_icon()
 		return 1
-	else
-		to_chat(user, "<span class='warning'>You can't let go of \the [I]!</span>")
 
 /obj/item/clothing/accessory/holster/proc/unholster(mob/user as mob)
 	if(!holstered)
@@ -164,10 +165,10 @@
 
 /obj/item/clothing/accessory/holster/handgun/preloaded/NTUSP/fancy
 	gun_type = /obj/item/weapon/gun/projectile/NTUSP/fancy
-	
+
 /obj/item/clothing/accessory/holster/handgun/preloaded/glock
 	gun_type = /obj/item/weapon/gun/projectile/glock
-	
+
 /obj/item/clothing/accessory/holster/handgun/preloaded/glock/fancy
 	gun_type = /obj/item/weapon/gun/projectile/glock/fancy
 
@@ -192,6 +193,7 @@
 	return is_type_in_list(W, list(\
 		/obj/item/weapon/kitchen/utensil, \
 		/obj/item/tool/screwdriver, \
+		/obj/item/tool/solder, \
 		/obj/item/tool/wirecutters, \
 		/obj/item/weapon/pen, \
 		/obj/item/tool/scalpel, \

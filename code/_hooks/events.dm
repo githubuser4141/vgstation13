@@ -26,6 +26,11 @@
 // atom/movable/mover: the movable itself.
 /event/moved
 
+// Called whenever an /atom/movable relay-moves.
+// Arguments:
+// atom/movable/mover: the movable itself.
+/event/relaymoved
+
 // Called right before an /atom/movable attempts to move or change dir.
 /event/before_move
 
@@ -79,6 +84,12 @@
 // mob/user: The living mob that's logging in.
 /event/living_login
 
+// Called by new_player.dm when a character latejoins
+// Arguments:
+// mob/living/carbon/human/character: The character that has arrived on the station.
+// rank: The character's job. Should be something like "Chemist", NOT the job datum.
+/event/late_arrival
+
 // Called whenever a mob takes damage.
 // Truthy return values will prevent the damage.
 // Arguments:
@@ -101,7 +112,6 @@
 /event/clickon
 
 // Called when an atom is attacked with an empty hand.
-// Currently only used by xenoarch artifacts, should probably be moved to the base proc.
 // Arguments:
 // mob/user: the guy who is attacking.
 // atom/target: the atom that's being attacked.
@@ -154,7 +164,7 @@
 // Currently only implemented for humans.
 // Arguments:
 // atom/movable/bumper: the atom that is bumping.
-// atom/target: the atom that's being bumped into.
+// atom/bumped: the atom that's being bumped into.
 /event/to_bump
 
 // Called by hitby
@@ -168,7 +178,7 @@
 // Arguments:
 // mob/attacker: the mob doing the attack
 // mob/attacked: the victim of the attack
-// mob/item: the item being used to attack with
+// obj/item/item: the item being used to attack with
 /event/attacked_by
 
 // Called by unarmed_attack_mob
@@ -199,7 +209,7 @@
 /event/beam_power_change
 
 // Called by attackby
-// Currently only used by artifacts.
+// Used by artifacts and cooktops.
 // Arguments:
 // mob/living/attacker: the mob attacking the atom
 // obj/item/item: the item being used for the attack
@@ -210,6 +220,7 @@
 // atom/hit_atom: the atom hit by the throw impact
 // speed: the speed at which the thrown atom was thrown
 // mob/living/user: the mob who threw the atom, if any
+// thrown_atom: the atom that was thrown
 /event/throw_impact
 
 //Called by examine
@@ -218,12 +229,6 @@
 /event/examined
 
 /event/ui_act
-
-// Called when living calls a life() tick
-// Arguments:
-// mob/living/L: thing that ticker
-// life_ticks: the amounts of lifetick processed
-/lazy_event/on_life
 
 // Called by attack_self
 // Arguments:
@@ -263,6 +268,28 @@
 // atom/movable/exiter: the movable exiting the area
 /event/area_exited
 
+// Arguments:
+// mob/killer: the person who killed
+// mob/victim: the person who got killed
+/event/kill
+
+// Arguments:
+// time: shuttle timer
+// direction: shuttle direction
+/event/shuttletimer
+
+// Called by miscellaneous functions not covered by entered, equipped and unequipped events for cameranet updates
+// Arguments:
+// atom/movable/mover: the atom changing status on the cameranet
+/event/camera_sight_changed
+
+// Called by both area/Entered and area/Exited if the atom changing areas is a mob
+// Arguments:
+// mob: the mob changing areas
+// newarea: the new area being entered
+// oldarea: the old area being left
+/event/mob_area_changed
+
 // Note: the following are used by datum/component/ai subtypes to give instructions to each other.
 // AI components are expected to INVOKE_EVENT these to send commands to other components
 // on the same datum without having to hold references to them.
@@ -291,6 +318,10 @@
 
 /event/comp_ai_cmd_say
 /event/comp_ai_cmd_specific_say
+
+/event/comp_ai_cmd_order
+
+/event/comp_ai_cmd_retaliate
 
 /datum
 	/// Associative list of type path -> list(),
@@ -363,6 +394,18 @@
 		registered_events -= event_type
 	if(!registered_events.len)
 		registered_events = null
+
+/**
+  * Checks if a datum has a registered event.
+  * Arguments:
+  * * event/event_type Required. The typepath of the event to unregister.
+  * * datum/target Required. The object that's been previously registered.
+  * * procname Required. The proc of the object.
+  */
+/datum/proc/has_event(event/event_type, datum/target, procname)
+	if(!target || !procname)
+		return registered_events && registered_events[event_type]
+	return registered_events && registered_events[event_type] && registered_events[event_type]["[ref(target)]:[procname]"]
 
 #undef EVENT_HANDLER_OBJREF_INDEX
 #undef EVENT_HANDLER_PROCNAME_INDEX

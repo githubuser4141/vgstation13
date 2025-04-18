@@ -1,3 +1,6 @@
+/mob/living/carbon
+	admin_desc = "The 'manual_emote_sound_override' variable can be set to 1 to enable a character to scream audibly whenever they want."
+
 /mob/living/carbon/Login()
 	..()
 	update_hud()
@@ -23,7 +26,6 @@
 	if(istype(AM, /mob/living/carbon))
 		var/mob/living/carbon/C = AM
 		C.handle_symptom_on_touch(src, AM, BUMP)
-	INVOKE_EVENT(src, /event/to_bump, "bumper" = src, "bumped" = AM)
 
 /mob/living/carbon/Bumped(var/atom/movable/AM)
 	..()
@@ -45,7 +47,10 @@
 		displayed_holomap.update_holomap()
 
 /mob/living/carbon/attack_animal(mob/living/simple_animal/M as mob)//humans and slimes have their own
+	if(check_shields(0, M))
+		return 0
 	M.unarmed_attack_mob(src)
+	return 1
 
 /mob/living/carbon/relaymove(var/mob/user, direction)
 	if(user in src.stomach_contents)
@@ -73,6 +78,9 @@
 				user.delayNextMove(10) //no just holding the key for an instant gib
 
 /mob/living/carbon/gib(animation = FALSE, meat = TRUE)
+	if(status_flags & BUDDHAMODE)
+		adjustBruteLoss(200)
+		return
 	dropBorers(1)
 	if(stomach_contents && stomach_contents.len)
 		drop_stomach_contents()
@@ -145,9 +153,6 @@
 	active_hand = selhand
 	update_hands_icons()
 
-/mob/living/carbon/proc/update_inv_by_slot(var/slot_flags)
-	return
-
 /mob/living/carbon/proc/update_hands_icons()
 	if(!hud_used)
 		return
@@ -215,7 +220,7 @@
 					num_injuries++
 
 			if(num_injuries == 0)
-				if(hallucinating())
+				if(hallucinating() || Holiday == APRIL_FOOLS_DAY)
 					to_chat(src, "<span class = 'orange'>My legs are OK.</span>")
 				else
 					to_chat(src, "My limbs are [pick("okay","OK")].")
@@ -397,17 +402,17 @@
 		src << browse(null, t1)
 
 	if(href_list["hands"])
-		if(usr.incapacitated() || !Adjacent(usr)|| isanimal(usr))
+		if(usr.incapacitated() || !Adjacent(usr)|| (isanimal(usr) && !isgrinch(usr)))
 			return
 		handle_strip_hand(usr, text2num(href_list["hands"])) //href_list "hands" is the hand index, not the item itself. example, GRASP_LEFT_HAND
 
 	else if(href_list["item"])
-		if(usr.incapacitated() || !Adjacent(usr)|| isanimal(usr))
+		if(usr.incapacitated() || !Adjacent(usr)|| (isanimal(usr) && !isgrinch(usr)))
 			return
 		handle_strip_slot(usr, text2num(href_list["item"])) //href_list "item" would actually be the item slot, not the item itself. example: slot_head
 
 	else if(href_list["internals"])
-		if(usr.incapacitated() || !Adjacent(usr)|| isanimal(usr))
+		if(usr.incapacitated() || !Adjacent(usr)|| (isanimal(usr) && !isgrinch(usr)))
 			return
 		set_internals(usr)
 
@@ -644,13 +649,10 @@
 	. = ..()
 	if(!istype(loc, /turf/space))
 		for(var/obj/item/I in get_all_slots())
-			if(I.slowdown <= 0)
-				testing("[I] HAD A SLOWDOWN OF <=0 OH DEAR")
-			else
-				if(I.flags & SLOWDOWN_WHEN_CARRIED)
-					. *= max(1,I.slowdown / 2) // heavy items worn on the back. those shouldn't slow you down as much.
-				else
-					. *= I.slowdown
+			if(I == src.back)
+				. *= max(1,I.slowdown / 2) // heavy items worn on the back. those shouldn't slow you down as much.
+			else if(!isclothing(I) || (isclothing(I) && (I in get_clothing_items())))
+				. *= I.slowdown
 
 		for(var/obj/item/I in held_items)
 			if(I.flags & SLOWDOWN_WHEN_CARRIED)
@@ -688,7 +690,10 @@
 		spawn(time)
 			make_visible(source_define)
 
-/mob/living/carbon/make_visible(var/source_define)	
+/mob/living/carbon
+	var/ice_sliding = 0
+
+/mob/living/carbon/make_visible(var/source_define)
 	if(!source_define)
 		return
 	if(src && body_alphas[source_define])
@@ -703,29 +708,68 @@
 	if(unslippable) //if unslippable, don't even bother making checks
 		return FALSE
 
+	var/slide_dir = dir
 	switch(P.wet)
 		if(TURF_WET_WATER)
 			if(Slip(stun_amount = 5, weaken_amount = 3, slip_on_walking = FALSE, overlay_type = TURF_WET_WATER, onwhat = "the wet floor", otherscansee = TRUE, spanclass = "warning"))
-				step(src, dir)
+				step(src, slide_dir)
 			else
 				return FALSE
 
 		if(TURF_WET_LUBE)
-			step(src, dir)
+			step(src, slide_dir)
 			if(Slip(stun_amount = 5, weaken_amount = 3, slip_on_walking = TRUE, overlay_type = TURF_WET_LUBE, slip_on_magbooties = TRUE, onwhat = "the floor", otherscansee = TRUE, spanclass = "warning"))
 				for(var/i = 1 to 4)
 					spawn(i)
 						if(!locked_to)
-							step(src, dir)
+							step(src, slide_dir)
 				take_organ_damage(2) // Was 5 -- TLE
 			else
 				return FALSE
 
 
 		if(TURF_WET_ICE)
-			if(prob(30) && Slip(stun_amount = 4, weaken_amount = 3,  overlay_type = TURF_WET_ICE, onwhat = "the icy floor", otherscansee = TRUE, spanclass = "warning"))
-				step(src, dir)
+			if(!ice_sliding && prob(15) && Slip(stun_amount = 4, weaken_amount = 3,  overlay_type = TURF_WET_ICE, onwhat = "the icy floor", otherscansee = TRUE, spanclass = "warning"))
+				ice_sliding = 1
+				// Wait movement_delay(), which is how long it takes for the movement step onto the slippery tile to finish.
+				spawn(ceil(movement_delay()))
+					var/slide_speed = movement_delay()*4
+					var/turf/next_turf = get_turf(src)
+					// Loop until you reach a tile that doesn't have ice on it. Speed progressively gets slower. next_turf represents the turf you expect to be on
+					// after the next step completes - if you're not on that, it indicates the user manually moved and thus the slide is over.
+					while(can_apply_inertia())
+						if(next_turf != get_turf(src))
+							break
+						next_turf = get_step(src, slide_dir)
+						set_glide_size(DELAY2GLIDESIZE(slide_speed))
+						step(src, slide_dir)
+						sleep(ceil(slide_speed))
+						slide_speed *= 1.1
+						var/obj/effect/overlay/puddle/ice/next = locate(/obj/effect/overlay/puddle/ice) in next_turf
+						if(!next)
+							break
+						if(	next.wet != TURF_WET_ICE)
+							break
+					ice_sliding = 0
 			else
 				return FALSE
 
 	return TRUE
+
+
+/mob/living/carbon/proc/check_can_revive()
+	if (!isDead())
+		return CAN_REVIVE_NO
+	if (!mind)
+		return CAN_REVIVE_NO
+	if (mind.suiciding)
+		return CAN_REVIVE_NO
+	if (client)
+		return CAN_REVIVE_IN_BODY
+	var/mob/dead/observer/ghost = mind_can_reenter(mind)
+	if (!ghost)
+		return CAN_REVIVE_NO
+	var/mob/ghostmob = ghost.get_top_transmogrification()
+	if (!ghostmob)
+		return CAN_REVIVE_NO
+	return CAN_REVIVE_GHOSTING

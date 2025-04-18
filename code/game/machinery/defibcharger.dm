@@ -29,15 +29,6 @@
 
 	RefreshParts()
 
-/obj/machinery/recharger/defibcharger/wallcharger/attack_hand(mob/user)
-	add_fingerprint(user)
-
-	if(charging)
-		user.put_in_hands(charging)
-		charging.update_icon()
-		charging = null
-		use_power = MACHINE_POWER_USE_IDLE
-		update_icon()
 
 /obj/machinery/recharger/defibcharger/wallcharger/emp_act(severity)
 	if(stat & (NOPOWER|BROKEN|FORCEDISABLE) || !anchored)
@@ -92,6 +83,10 @@
 	if(istype(G, /obj/item/weapon/melee/defibrillator))
 		if(..())
 			return
+		if(istype(G, /obj/item/weapon/melee/defibrillator/improvised))
+			to_chat(user, "<span class='warning'>\The [G] won't fit.</span>")
+			return
+
 		var/obj/item/weapon/melee/defibrillator/D = G
 		if(D.ready)
 			to_chat(user, "<span class='warning'>\The [D] won't fit. Try putting the paddles back on!</span>")

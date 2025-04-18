@@ -3,12 +3,13 @@
 #define REAGENT_STATE_GAS 3
 #define FOOD_METABOLISM 0.4
 #define REAGENTS_OVERDOSE 30
-#define REM REAGENTS_EFFECT_MULTIPLIER
+#define REM REAGENTS_EFFECT_MULTIPLIER //0.5
 
 // Use in chem.flags.
 #define CHEMFLAG_DISHONORABLE 1
-#define CHEMFLAG_OBSCURING 2
-
+#define CHEMFLAG_OBSCURING	2
+#define CHEMFLAG_PIGMENT	4
+#define CHEMFLAG_NOTREMOVABLE	8 //cannot be rid of by charcoal (or other reagent tomfoolery means).
 
 #define EXPLICITLY_INVALID_REAGENT_ID "Use this ID if the reagent is not supposed to be used, like for the base type of other reagents."
 
@@ -32,11 +33,13 @@
 #define POTASSIUM_HYDROXIDE 			"potassium_hydroxide"
 #define CHEFSPECIAL 			"chefspecial"
 #define MINTTOXIN 			"minttoxin"
+#define MINTESSENCE				"mintessence"
 #define MUTATIONTOXIN 			"mutationtoxin"
 #define AMUTATIONTOXIN 			"amutationtoxin"
 #define STOXIN 			"stoxin"
 #define INAPROVALINE 			"inaprovaline"
 #define HOLYWATER 			"holywater"
+#define SACREDWATER 		"sacredwater"
 #define SEROTROTIUM 			"serotrotium"
 #define SILICATE 			"silicate"
 #define OXYGEN 			"oxygen"
@@ -78,6 +81,9 @@
 #define ALUMINUM 			"aluminum"
 #define SILICON 			"silicon"
 #define FUEL 			"fuel"
+#define FUELBOMB 			"fuelbomb"
+#define PLASMABOMB 			"plasmabomb"
+#define ANFOBOMB 			"anfobomb"
 #define VOMIT 			"vomit"
 #define CLEANER 			"cleaner"
 #define BLEACH 				"bleach"
@@ -97,6 +103,7 @@
 #define TRICORDRAZINE 			"tricordrazine"
 #define SIMPOLINOL			"simpolinol"
 #define ADMINORDRAZINE 			"adminordrazine"
+#define PANACEA				"panacea"
 #define PROCIZINE 			"procizine"
 #define SYNAPTIZINE 			"synaptizine"
 #define IMPEDREZENE 			"impedrezene"
@@ -113,6 +120,7 @@
 #define PHYTOCARISOL			"phytocarisol"
 #define HYPERZINE 			"hyperzine"
 #define HYPOZINE 			"hypozine"
+#define LIQUIDPCP 			"liquidpcp"
 #define CRYOXADONE 			"cryoxadone"
 #define CLONEXADONE 			"clonexadone"
 #define REZADONE 			"rezadone"
@@ -140,8 +148,10 @@
 #define NICOTINE 			"nicotine"
 #define AMMONIA 			"ammonia"
 #define SALINE				"saline"
-#define GLUE 			"glue"
+#define ETHYLCYANOACRYLATE	"ethylcyanoacrylate"
+#define GLUE 				"glue"
 #define DIETHYLAMINE 			"diethylamine"
+#define AMMONIUMNITRATE         "ammoniumnitrate"
 #define ETHYLREDOXRAZINE 			"ethylredoxrazine"
 #define CHLORALHYDRATE 			"chloralhydrate"
 #define SUX					"suxameth"
@@ -157,6 +167,7 @@
 #define HOLYSALTS 			"holysalts"
 #define CREATINE 			"creatine"
 #define CARPPHEROMONES 			"carppheromones"
+#define KILLERPHEROMONES 		"killerpheromones"
 #define BLACKPEPPER 			"blackpepper"
 #define CINNAMON 			"cinnamon"
 #define ZAMSPICES			"zamspices"
@@ -165,7 +176,7 @@
 #define POLYPGELATIN				"polypgelatin"
 #define COCO 			"coco"
 #define AMATOXIN 			"amatoxin"
-#define AMANATIN 			"amanatin"
+#define AMANITIN 			"amanitin"
 #define PSILOCYBIN 			"psilocybin"
 #define SPRINKLES 			"sprinkles"
 #define SYNDICREAM 			"syndicream"
@@ -208,6 +219,7 @@
 #define NOTHING 			"nothing"
 #define POTATO 			"potato"
 #define MILK 			"milk"
+#define CHOCOLATEMILK	"chocolatemilk"
 #define MOMMIMILK 			"mommimilk"
 #define SOYMILK 			"soymilk"
 #define CREAM 			"cream"
@@ -325,6 +337,10 @@
 #define DEVILSKISS 			"devilskiss"
 #define MEAD 			"mead"
 #define GROG 			"grog"
+#define EVOLUATOR		"evoluator"
+#define BLOBBEER		"blobbeer"
+#define LIBERATOR		"liberator"
+#define SPORE			"spore"
 #define ALOE 			"aloe"
 #define ANDALUSIA 			"andalusia"
 #define ALLIESCOCKTAIL 			"alliescocktail"
@@ -360,6 +376,7 @@
 #define DOPPIO 			"doppio"
 #define PASSIONE 			"passione"
 #define SECCOFFEE 			"seccoffee"
+#define ENGICOFFEE			"engicoffee"
 #define MEDCOFFEE 			"medcoffee"
 #define DETCOFFEE 			"detcoffee"
 #define ETANK 			"etank"
@@ -419,6 +436,8 @@
 #define MUSTARD			"mustard"
 #define RELISH			"relish"
 #define UNTABLE_MUTAGEN		"untable"
+#define METATABLE_MUTAGEN	"metatable"
+#define METASTABLE_MUTAGEN	"metastable"
 #define ELECTRIC_SHEEP		"electric_sheep"
 #define SCIENTISTS_SERENDIPITY		"scientists_serendipity"
 #define METABUDDY		"metabuddy"
@@ -427,6 +446,7 @@
 #define RAGSTORICHES	"ragstoriches"
 #define WAIFU			"waifu"
 #define HUSBANDO		"husbando"
+#define TOMBOY			"tomboy"
 #define BEEPSKY_CLASSIC	"beepsky_classic"
 #define SMOKYROOM		"smokyroom"
 #define BAD_TOUCH		"bad_touch"
@@ -445,6 +465,7 @@
 #define GEOMETER		"geometer"
 #define EGG_YOLK		"egg_yolk"
 #define PANCAKE			"pancake"
+#define PAINCAKE		"paincake"
 #define SPAGHETTI		"spaghetti"
 #define MUSTARD_POWDER	"mustard_powder"
 #define MAYO			"mayo"
@@ -461,6 +482,10 @@
 #define DSYRUP			"dsyrup"
 #define GRUE_BILE		"grue_bile"
 #define PINKLADY		"pinklady"
+#define FAKE_CREEP		"fake_creep"
+#define BLOBANINE		"blobanine"
+#define BLOB_ESSENCE	"blob_essence"
+#define METHAMPHETAMINE "methamphetamine"
 
 #define TUNGSTEN 			"tungsten"
 #define LITHIUMSODIUMTUNGSTATE 			"lithiumsodiumtungstate"
@@ -471,6 +496,7 @@
 #define MIDAZOLINE		"midazoline"
 #define LOCUTOGEN		"locutogen"
 #define BUMCIVILIAN		"bumcivilian"
+#define PUNCTUALITE		"punctualite"
 
 //Plant-specific reagents
 #define TANNIC_ACID		"tannic_acid"
@@ -504,9 +530,32 @@
 #define TOMATO_SOUP		"tomato_soup"
 #define LUMINOL			"luminol"
 #define CAFFEINE		"caffeine"
+#define MIMOSA			"mimosa"
+#define LEMONDROP		"lemondrop"
+#define FEVERFEW		"feverfew"
+#define SQUASH			"squash"
+#define PRIAXATE		"priaxate"
+
+#define ACRYLIC			"acrylic"
+#define ACETONE			"acetone"
+#define NANOPAINT		"nano_paint"
+#define FLAXOIL			"flax_oil"
+#define WAX				"wax"
+
+#define PLUTONIUM		"plutonium"
+#define RADON			"radon"
+#define LEAD			"lead"
+#define THALLIUM		"thallium"
+#define REGENERATECALCIUM	"regeneratecalcium"
+#define EQUALIZONE		"equalizone"
+
+#define DYE_DANDELIONS	"dandelion_dye"
 
 // How many units of reagent are consumed per tick, by default.
 #define REAGENTS_METABOLISM 0.2
+
+//Flag for skipping running handle_reactions() after reagent heating when it's already been determined that the given reagents have no reaction that could occur if only temperature was changed.
+#define SKIP_RXN_CHECK_ON_HEATING (1<<0)
 
 //Temperatures of things (Kelvin)
 #define TEMPERATURE_HOTMETAL 300
@@ -515,7 +564,7 @@
 #define TEMPERATURE_WELDER 3480
 #define TEMPERATURE_PLASMA 4500
 #define TEMPERATURE_ETHANOL (T0C+1560)
-#define HEAT_TRANSFER_MULTIPLIER 7 //Multiplies the numbers above when heating a reagent container. A truly magical number.
+#define HEAT_TRANSFER_MULTIPLIER 7 //Multiplies the numbers above when heating a reagent container. A truly magical number. Not currently used anywhere due to a bug with reagent heating being fixed.
 
 // By defining the effect multiplier this way, it'll exactly adjust
 // all effects according to how they originally were with the 0.4 metabolism
@@ -537,7 +586,8 @@ var/list/cheartstopper = list(/*"potassium_chloride",*/ CHEESYGLOOP) //this stop
 #define BICARIDINES list(BICARIDINE, OPIUM)
 #define SPACE_DRUGGS list(SPACE_DRUGS, MESCALINE)
 #define SYNAPTIZINES list(SYNAPTIZINE, CYTISINE)
-#define HYPERZINES list(HYPERZINE, COCAINE)
+#define HYPERZINES list(HYPERZINE, COCAINE, LIQUIDPCP, METHAMPHETAMINE) //all hyperzine calls call this, except a couple recipes which call safehyperzines
+#define SAFEHYPERZINES list(HYPERZINE, COCAINE) //here so some recipes don't get fucked up and turn recursive
 #define IMIDAZOLINES list(IMIDAZOLINE, ZEAXANTHIN)
 #define STOXINS list(STOXIN, STOXIN2, VALERENIC_ACID)
 #define SACIDS list(SACID, FORMIC_ACID)
@@ -553,6 +603,10 @@ var/list/cheartstopper = list(/*"potassium_chloride",*/ CHEESYGLOOP) //this stop
 #define CORES list(SOFTCORES, MEDCORES)
 #define ALLNANITES list(NANITES, AUTISTNANITES)
 #define SUGARS list(SUGAR, CORNSYRUP)
+#define GUNKS list(CHEMICAL_WASTE, TOXICWASTE, VOMIT, TOXIN, SOLANINE, RADIUM, MUTAGEN, UNTABLE_MUTAGEN, SPIDERS)
+#define COLDDRINKS list(ICECOFFEE, ICETEA, ICED_BEER, ARNOLDPALMER, TONIC, SODAWATER, ICE, COLA, NUKA_COLA, GEOMETER, SPACEMOUNTAINWIND, DR_GIBB, SPACE_UP, LEMON_LIME, LEMONADE, KIRASPECIAL, MILKSHAKE, BROWNSTAR, REWRITER, DIY_SODA)
+#define HOTDRINKS list(COFFEE, SOY_LATTE, TEA, GATORMIX, HOT_COCO, HOT_COCO_SUBHUMAN, CREAMY_HOT_COCO) //Blisterol not included as that's medicine, not a warm drink
+//HOT and COLD drinks defines used for the mint toxin/mint essence checks for tooth pain and shit, maybe you can find another use for it
 
 #define INCENSE_HAREBELLS	"harebells"
 #define INCENSE_POPPIES		"poppies"
@@ -561,9 +615,11 @@ var/list/cheartstopper = list(/*"potassium_chloride",*/ CHEESYGLOOP) //this stop
 #define INCENSE_NOVAFLOWERS	"novaflowers"
 #define INCENSE_BANANA		"bananas"
 #define INCENSE_BOOZE		"helmets"
-#define INCENSE_LEAFY		"cabbage"
+#define INCENSE_LEAFY		"leafy"
 #define INCENSE_VAPOR		"vaporsacs"
 #define INCENSE_DENSE		"grasses"
 #define INCENSE_CRAVE		"vales"
 #define INCENSE_CORNOIL 	"cornoils"
 #define INCENSE_MUSTARDPLANT "mustardplant"
+
+#define PAINT_CLEANER_THRESHOLD 0.7 // How much of the reagent should be water or some cleaner to clean paint off a canvas or brush

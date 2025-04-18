@@ -25,11 +25,6 @@
 	var/damaged_sound	//Audible sound when the object is damaged by an attack, but not fully broken. Defaults to glanced_sound if unset.
 	var/glanced_sound	//Audible sound when the object recives a glancing attack not strong enough to damage it.
 
-/obj/New()
-	..()
-	if(breakable_flags)
-		breakable_init()
-
 /obj/proc/breakable_init()
 	//Initialize health and maxHealth to the same value if only one is specified.
 	if(isnull(health) && maxHealth)
@@ -141,14 +136,7 @@
 
 /obj/item/transfer_obj_blood_data(obj/item/A, obj/item/B)
 	..()
-	if(!blood_overlays[B.type]) //If there isn't a precreated blood overlay make one
-		B.generate_blood_overlay()
-	if(B.blood_overlay != null) // Just if(blood_overlay) doesn't work.  Have to use isnull here.
-		B.overlays.Remove(B.blood_overlay)
-	else
-		B.blood_overlay = blood_overlays[B.type]
-	B.blood_overlay.color = B.blood_color
-	B.overlays += B.blood_overlay
+	B.set_blood_overlay()
 
 /obj/proc/generate_break_text(glanced = FALSE, suppress_glance_text) //Generates text for when an object is hit.
 	if(glanced)
@@ -237,7 +225,7 @@
 		var/glanced=!take_damage(W.force, damage_type = W.damtype == BURN ? "energy" : "melee", skip_break = TRUE)
 		if(W.hitsound)
 			playsound(src, W.hitsound, 50, 1)
-		user.visible_message("<span class='warning'>\The [user] [pick(W.attack_verb)] \the [src] with \the [W][generate_break_text(glanced,TRUE)]</span>","<span class='notice'>You [shift_verb_tense(pick(W.attack_verb))] \the [src] with \the [W][generate_break_text(glanced)]<span>")
+		user.visible_message("<span class='warning'>\The [user] [W.attack_verb?.len ? pick(W.attack_verb) : "attacks"] \the [src] with \the [W][generate_break_text(glanced,TRUE)]</span>","<span class='notice'>You [W.attack_verb?.len ? shift_verb_tense(pick(W.attack_verb)) : "attack"] \the [src] with \the [W][generate_break_text(glanced)]<span>")
 		try_break()
 		//Break the weapon as well, if applicable, based on its own force.
 		if(W.breakable_flags & BREAKABLE_AS_MELEE && W.damtype == BRUTE)
@@ -314,6 +302,11 @@
 
 /obj/kick_act/(mob/living/carbon/human/kicker)
 	if(breakable_flags & BREAKABLE_UNARMED && kicker.can_kick(src))
+		if(arcanetampered && density && anchored)
+			to_chat(kicker,"<span class='sinister'>[src] kicks YOU!</span>")
+			kicker.Knockdown(10)
+			kicker.Stun(10)
+			return
 		//Pick a random usable foot to perform the kick with
 		var/datum/organ/external/foot_organ = kicker.pick_usable_organ(LIMB_RIGHT_FOOT, LIMB_LEFT_FOOT)
 		kicker.delayNextAttack(2 SECONDS) //Kicks are slow
@@ -343,9 +336,9 @@
 		if(kicker.loc == loc)
 			kick_dir = kicker.dir
 		var/turf/T = get_edge_target_turf(loc, kick_dir)
-		var/kick_power = max((kicker.get_strength() * 10 - (get_total_scaled_w_class(2))), 1) //The range of the kick is (strength)*10. Strength ranges from 1 to 3, depending on the kicker's genes. Range is reduced by w_class^2, and can't be reduced below 1.
+		var/kick_power = get_kick_power(kicker)
 		var/thispropel = new /datum/throwparams(T, kick_power, 1)
-		if(kick_power < 6)
+		if(kick_power < 1)
 			kick_power = 0
 			thispropel = null
 		if(try_break(thispropel))

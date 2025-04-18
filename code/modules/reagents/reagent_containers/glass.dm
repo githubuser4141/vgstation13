@@ -14,39 +14,6 @@
 	flags = FPRINT  | OPENCONTAINER
 	layer = ABOVE_OBJ_LAYER
 	var/opaque = FALSE //when true no reagent filling overlay is applied to the icon.
-	//This is absolutely terrible
-	// TODO To remove this, return 1 on every attackby() that handles reagent_containers.
-	var/list/can_be_placed_into = list(
-		/obj/machinery/chem_master/,
-		/obj/machinery/chem_dispenser/,
-		/obj/machinery/reagentgrinder,
-		/obj/structure/table,
-		/obj/structure/closet,
-		/obj/structure/sink,
-		/obj/structure/centrifuge,
-		/obj/item/weapon/storage,
-		/obj/item/tool/solder,
-		/obj/machinery/atmospherics/unary/cryo_cell,
-		/obj/machinery/dna_scannernew,
-		/obj/item/weapon/grenade/chem_grenade,
-		/obj/item/weapon/electrolyzer,
-		/obj/machinery/bot/medbot,
-		/obj/item/weapon/storage/secure/safe,
-		/obj/machinery/iv_drip,
-		/obj/machinery/disease2/incubator,
-		/obj/machinery/disease2/centrifuge,
-		/obj/machinery/disposal,
-		/obj/machinery/apiary,
-		/mob/living/simple_animal/cow,
-		/mob/living/simple_animal/hostile/retaliate/goat,
-		/obj/machinery/cooking/icemachine,
-		/obj/machinery/sleeper,
-		/obj/machinery/anomaly,
-		/obj/machinery/bunsen_burner,
-		/obj/item/weapon/sword/venom,
-		/obj/item/weapon/cylinder,
-		/obj/item/clothing/gloves/powerfist,
-		)
 
 /obj/item/weapon/reagent_containers/glass/get_rating()
 	return volume / 50
@@ -77,15 +44,23 @@
 	if (!adjacency_flag)
 		return
 
-	if (is_type_in_list(target, can_be_placed_into))
+	if (!target.splashable() ||  isshelf(target))
 		return
 
 	if(ishuman(target) || iscorgi(target)) //Splashing handled in attack now
 		return
 
-	var/transfer_result = transfer(target, user, splashable_units = -1) // Potentially splash with everything inside
+	var/transfer_result
 
-	if((transfer_result > 10) && (isturf(target) || istype(target, /obj/machinery/portable_atmospherics/hydroponics)))	//if we're splashing a decent amount of reagent on the floor
+	if (controlled_splash)
+		transfer_result = transfer(target, user, splashable_units = amount_per_transfer_from_this)
+	else
+		transfer_result = transfer(target, user, splashable_units = -1)// Potentially splash with everything inside
+
+	if (transfer_result)
+		splash_special()
+
+	if((transfer_result >= 10) && (isturf(target) || istype(target, /obj/machinery/portable_atmospherics/hydroponics)))	//if we're splashing a decent amount of reagent on the floor
 		playsound(target, 'sound/effects/slosh.ogg', 25, 1)													//or in an hydro tray, then we make some noise.
 
 /obj/item/weapon/reagent_containers/glass/attackby(obj/item/weapon/W as obj, mob/user as mob)
@@ -98,9 +73,21 @@
 				..()
 		set_tiny_label(user)
 	attempt_heating(W, user)
+	process_temperature()
 
 /obj/item/weapon/reagent_containers/glass/fits_in_iv_drip()
 	return 1
+
+/obj/item/weapon/reagent_containers/glass/update_icon()
+	update_temperature_overlays()
+
+/obj/item/weapon/reagent_containers/glass/update_temperature_overlays()
+	//we only care about the steam
+
+	if(reagents && reagents.total_volume)
+		steam_spawn_adjust(reagents.chem_temp)
+	else
+		steam_spawn_adjust(0)
 
 /obj/item/weapon/reagent_containers/glass/beaker
 	name = "beaker"
@@ -129,14 +116,7 @@
 		to_chat(user, "You begin drilling holes into the bottom of \the [src].")
 		playsound(user, 'sound/machines/juicer.ogg', 50, 1)
 		if(do_after(user, src, 60))
-			to_chat(user, "You drill six holes through the bottom of \the [src].")
-			if(src.loc == user)
-				user.drop_item(src, force_drop = 1)
-				var/obj/item/weapon/cylinder/I = new (get_turf(user))
-				user.put_in_hands(I)
-			else
-				new /obj/item/weapon/cylinder(get_turf(src.loc))
-			qdel(src)
+			user.create_in_hands(src, /obj/item/weapon/cylinder, msg = "You drill six holes through the bottom of \the [src].")
 		return
 	return ..()
 
@@ -173,6 +153,7 @@
 		return 1
 
 /obj/item/weapon/reagent_containers/glass/beaker/on_reagent_change()
+	..()
 	update_icon()
 
 /obj/item/weapon/reagent_containers/glass/beaker/pickup(mob/user)
@@ -219,6 +200,9 @@
 		var/image/lid = image(icon, src, "lid_[initial(icon_state)]")
 		overlays += lid
 
+	update_temperature_overlays()
+	set_blood_overlay()//re-applying blood stains
+
 /obj/item/weapon/reagent_containers/glass/beaker/erlenmeyer
 	name = "small erlenmeyer flask"
 	desc = "It's like a cute little snub-nosed beaker. Can hold up to 50 units."
@@ -243,6 +227,16 @@
 	icon_state = "beakerplasma"
 	origin_tech = Tc_PLASMATECH + "=4;" + Tc_MATERIALS + "=4"
 
+/obj/item/weapon/reagent_containers/glass/beaker/large/plasma/arcane_act(mob/user, recursive)
+	on_reagent_change()
+	return ..()
+
+/obj/item/weapon/reagent_containers/glass/beaker/large/plasma/on_reagent_change()
+	..()
+	if(arcanetampered && reagents.total_volume)
+		var/datum/chemical_reaction/chemsmoke/CS = new()
+		CS.on_reaction(src.reagents)
+
 /obj/item/weapon/reagent_containers/glass/beaker/large/supermatter
 	name = "supermatter beaker"
 	desc = "A beaker with a supermatter sliver. It heats fluids inside, but holding it makes your hand feel strange..."
@@ -258,7 +252,7 @@
 	..()
 
 /obj/item/weapon/reagent_containers/glass/beaker/large/supermatter/process()
-	if(reagents.total_volume)
+	if(reagents.total_volume && !arcanetampered)
 		reagents.heating(9000, TEMPERATURE_PLASMA)
 	if(ishuman(loc))
 		//held or in pocket of a human
@@ -274,6 +268,22 @@
 	flags = FPRINT  | OPENCONTAINER | NOREACT
 	origin_tech = Tc_BLUESPACE + "=3;" + Tc_MATERIALS + "=4"
 	opaque = TRUE
+	thermal_variation_modifier = 0
+	heat_conductivity = 0
+
+/obj/item/weapon/reagent_containers/glass/beaker/noreact/thermal_entropy()
+	thermal_entropy_containers.Remove(src)
+
+/obj/item/weapon/reagent_containers/glass/beaker/noreact/get_heat_conductivity()
+	return 0
+
+/obj/item/weapon/reagent_containers/glass/beaker/noreact/arcane_act(mob/user, recursive)
+	flags &= ~NOREACT
+	return ..()
+
+/obj/item/weapon/reagent_containers/glass/beaker/noreact/bless()
+	..()
+	flags |= NOREACT
 
 /obj/item/weapon/reagent_containers/glass/beaker/noreact/large
 	name = "large stasis beaker"
@@ -295,6 +305,17 @@
 	origin_tech = Tc_BLUESPACE + "=2;" + Tc_MATERIALS + "=3"
 	opaque = TRUE
 
+/obj/item/weapon/reagent_containers/glass/beaker/bluespace/arcane_act(mob/user, recursive)
+	reagents.clear_reagents()
+	reagents.maximum_volume = 25
+	volume = 25
+	return ..()
+
+/obj/item/weapon/reagent_containers/glass/beaker/bluespace/bless()
+	..()
+	volume = initial(volume)
+	reagents.maximum_volume = initial(volume)
+
 /obj/item/weapon/reagent_containers/glass/beaker/bluespace/large
 	name = "large bluespace beaker"
 	desc = "A prototype ultra-capacity beaker that uses advances in bluespace research. Can hold up to 300 units."
@@ -303,6 +324,12 @@
 	volume = 300
 	possible_transfer_amounts = list(5,10,15,25,30,50,100,150,200,300)
 	origin_tech = Tc_BLUESPACE + "=3;" + Tc_MATERIALS + "=5"
+
+/obj/item/weapon/reagent_containers/glass/beaker/bluespace/large/arcane_act(mob/user, recursive)
+	. = ..()
+	reagents.maximum_volume = 10
+	volume = 10
+	return .
 
 /obj/item/weapon/reagent_containers/glass/beaker/vial
 	name = "vial"
@@ -366,15 +393,16 @@
 	update_icon()
 
 /obj/item/weapon/reagent_containers/glass/bucket
-	desc = "It's a bucket."
-	name = "bucket"
+	name = "plastic bucket"
+	desc = "Can be used to store, carry, and pour reagents."
 	icon = 'icons/obj/janitor.dmi'
 	icon_state = "bucket"
 	item_state = "bucket"
 	species_fit = list(INSECT_SHAPED)
-	starting_materials = list(MAT_IRON = 200)
-	w_type = RECYK_METAL
+	starting_materials = list(MAT_PLASTIC = 200)
+	w_type = RECYK_PLASTIC //>implying this is a glass bucket
 	w_class = W_CLASS_MEDIUM
+	flammable = TRUE
 	amount_per_transfer_from_this = 20
 	possible_transfer_amounts = list(10,20,25,30,50,100,150)
 	armor = list(melee = 8, bullet = 3, laser = 3, energy = 0, bomb = 1, bio = 1, rad = 0)
@@ -386,11 +414,8 @@
 	..()
 	if(slot == slot_head)
 		if(reagents.total_volume)
-			for(var/atom/movable/O in M.loc)
-				reagents.reaction(O, TOUCH)
-			reagents.reaction(M.loc, TOUCH)
-			visible_message("<span class='warning'>The bucket's content spills on [src]</span>")
-			reagents.clear_reagents()
+			reagents.splashplosion(0)//splashing ourselves and everything on our tile with
+			visible_message("<span class='warning'>The bucket's content spills on \the [M].</span>")
 
 /obj/item/weapon/reagent_containers/glass/bucket/dissolvable()
 	var/mob/living/carbon/human/H = get_holder_of_type(src,/mob/living/carbon/human)
@@ -432,16 +457,13 @@
 
 /obj/item/weapon/reagent_containers/glass/bucket/attackby(var/obj/D, mob/user as mob)
 	if(isprox(D))
-		to_chat(user, "You add \the [D] to \the [src].")
-		qdel(D)
-		D = null
-		user.put_in_hands(new /obj/item/weapon/bucket_sensor)
-		user.drop_from_inventory(src)
-		qdel(src)
+		user.create_in_hands(src, /obj/item/weapon/bucket_sensor, D, msg = "You add \the [D] to \the [src].")
 		return
 	attempt_heating(D, user)
+	process_temperature()
 
 /obj/item/weapon/reagent_containers/glass/bucket/on_reagent_change()
+	..()
 	update_icon()
 
 /obj/item/weapon/reagent_containers/glass/bucket/update_icon()
@@ -454,6 +476,9 @@
 		filling.alpha = mix_alpha_from_reagents(reagents.reagent_list)
 
 		overlays += filling
+
+	update_temperature_overlays()
+	set_blood_overlay()//re-applying blood stains
 
 /obj/item/weapon/reagent_containers/glass/bucket/water_filled/New()
 	..()
@@ -473,6 +498,7 @@
 		to_chat(usr, "<span class = 'notice'>You can't reseal the can's lid.")
 
 /obj/item/weapon/reagent_containers/glass/soupcan/on_reagent_change()
+	..()
 	update_icon()
 
 /obj/item/weapon/reagent_containers/glass/soupcan/update_icon()
@@ -485,6 +511,9 @@
 		filling.alpha = mix_alpha_from_reagents(reagents.reagent_list)
 
 		overlays += filling
+
+	update_temperature_overlays()
+	set_blood_overlay()//re-applying blood stains
 
 /*
 /obj/item/weapon/reagent_containers/glass/blender_jug
@@ -533,12 +562,24 @@
 /obj/item/weapon/reagent_containers/glass/kettle
 	name = "Kettle"
 	desc = "A pot made for holding hot drinks. Can hold up to 75 units."
-	icon_state = "kettle"
+	icon_state = "kettle_red"
 	starting_materials = list(MAT_IRON = 200)
 	volume = 75
 	w_type = RECYK_GLASS
 	amount_per_transfer_from_this = 10
 	flags = FPRINT  | OPENCONTAINER
+	thermal_variation_modifier = 0.01
+
+/obj/item/weapon/reagent_containers/glass/kettle/steam_spawn_adjust(var/_temp)
+	if (!(PS_STEAM in particle_systems))
+		add_particles(PS_STEAM)
+	var/obj/abstract/particles_holder/steam_holder = particle_systems[PS_STEAM]
+	if (_temp < STEAMTEMP)
+		steam_holder.particles.spawning = 0
+	else
+		steam_holder.particles.spawning = clamp(0.1 + 0.002 * (_temp - STEAMTEMP),0.1,0.5)
+		steam_holder.particles.position = list(12,5)
+		steam_holder.particles.scale = list(0.3, 0.3)
 
 /obj/item/weapon/reagent_containers/glass/kettle/red
 	icon_state = "kettle_red"
@@ -551,3 +592,16 @@
 
 /obj/item/weapon/reagent_containers/glass/kettle/green
 	icon_state = "kettle_green"
+
+/obj/item/weapon/reagent_containers/glass/kettle/full/New()
+	..()
+	icon_state = "kettle[pick("_red","_blue","_purple","_green")]"
+	reagents.add_reagent(TEA,75)
+
+/obj/item/weapon/reagent_containers/glass/bucket/wooden
+	name = "wooden bucket"
+	icon_state = "woodenbucket"
+	item_state = "woodenbucket"
+	species_fit = list(INSECT_SHAPED)
+	starting_materials = list(MAT_WOOD = 4000)
+	w_type = RECYK_WOOD //wood

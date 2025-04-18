@@ -142,7 +142,27 @@
 			return access_not_dir
 	return can_access(ACL,req_access,req_one_access)
 
+/obj/item/var/time_since_last_random_access = 0
+/obj/item/var/list/arcane_access = list()
+
+/obj/item/arcane_act(mob/user, recursive)
+	arcane_access.Cut()
+	for(var/i in 1 to rand(1,5))
+		arcane_access.Add(pick(get_all_accesses()))
+	return ..()
+
+/obj/item/bless()
+	..()
+	arcane_access.Cut()
+
 /obj/item/proc/GetAccess()
+	if(arcanetampered)
+		if(!arcane_access || !arcane_access.len || (time_since_last_random_access + (30 SECONDS) < world.time))
+			for(var/i in 1 to rand(1,5))
+				arcane_access.Add(pick(get_all_accesses()))
+		if(time_since_last_random_access + (30 SECONDS) < world.time)
+			time_since_last_random_access = world.time
+		return arcane_access
 	return list()
 
 /obj/item/proc/GetID()
@@ -326,6 +346,25 @@
 			return "Station General"
 		if(7) //supply
 			return "Supply"
+
+/proc/get_region_accesses_positions(var/code)
+	switch(code)
+		if(0)
+			return all_jobs_txt
+		if(1) //security
+			return security_positions
+		if(2) //medbay
+			return medical_positions
+		if(3) //research
+			return science_positions
+		if(4) //engineering and maintenance
+			return engineering_positions
+		if(5) //command
+			return command_positions
+		if(6) //station general
+			return civilian_positions
+		if(7) //supply
+			return cargo_positions
 
 /proc/get_access_desc_list(var/list/L)
 	var/list/names = list()
@@ -547,4 +586,4 @@ var/global/list/all_jobs
 			return ID.registered_name
 
 /proc/get_all_job_icons() //For all existing HUD icons
-	return get_all_jobs() + list("Prisoner", "visitor")
+	return get_all_jobs() + list("Prisoner", "visitor", "Nanotrasen")

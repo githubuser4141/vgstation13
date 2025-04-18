@@ -18,11 +18,15 @@
 
 /obj/item/weapon/stock_parts/console_screen
 	name = "console screen"
-	desc = "Used in the construction of computers and other devices with a interactive console."
+	desc = "Used in the construction of computers and other devices with an interactive console."
 	icon_state = "screen"
 	origin_tech = Tc_MATERIALS + "=1"
 	starting_materials = list(MAT_GLASS = 200)
 	w_type = RECYK_GLASS
+
+//Console screens have a higher-than-normal rating so they don't get dumped out of a gadget bag/RPED despite being perfectly usable
+/obj/item/weapon/stock_parts/console_screen/get_rating()
+	return 5
 
 /obj/item/weapon/stock_parts/capacitor
 	name = "capacitor"
@@ -96,9 +100,10 @@
 
 //Rank 2
 
+//The upgraded console screens have been disabled from being conventionally found in-game because nothing in the game
+//currently uses their upgraded qualities.
 /obj/item/weapon/stock_parts/console_screen/reinforced
 	name = "reinforced console screen"
-	desc = "Used in the construction of computers and other devices with a interactive console."
 	icon_state = "rscreen"
 	origin_tech = Tc_MATERIALS + "=3"
 	rating = 2
@@ -149,7 +154,6 @@
 
 /obj/item/weapon/stock_parts/console_screen/reinforced/plasma
 	name = "plasma console screen"
-	desc = "Used in the construction of computers and other devices with a interactive console."
 	icon_state = "pscreen"
 	origin_tech = Tc_MATERIALS + "=5;" + Tc_PLASMATECH + "=3"
 	rating = 3
@@ -201,7 +205,6 @@
 
 /obj/item/weapon/stock_parts/console_screen/reinforced/plasma/rplasma
 	name = "reinforced plasma console screen"
-	desc = "Used in the construction of computers and other devices with a interactive console."
 	icon_state = "pscreen"
 	origin_tech = Tc_MATERIALS + "=7;" + Tc_PLASMATECH + "=3"
 	rating = 4

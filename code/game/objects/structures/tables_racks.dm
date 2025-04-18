@@ -23,7 +23,11 @@
 	pass_flags_self = PASSTABLE
 	var/parts = /obj/item/weapon/table_parts
 	var/flipped = 0
+	var/tableform = 0 //Stores last known configuration for this table
 	health = 100
+
+/obj/structure/table/splashable()
+	return FALSE
 
 /obj/structure/table/proc/update_adjacent()
 	for(var/direction in alldirs)
@@ -39,15 +43,19 @@
 
 /obj/structure/table/New()
 	..()
-	for(var/obj/structure/table/T in src.loc)
+	for(var/obj/structure/table/T in loc)
 		if(T != src)
 			qdel(T)
+	for(var/obj/machinery/M in loc)
+		M.table_shift()
 	if(flipped)
 		flip(dir)
 	update_icon()
 	update_adjacent()
 
 /obj/structure/table/Destroy()
+	for(var/obj/machinery/M in loc)
+		M.table_unshift()
 	update_adjacent()
 	..()
 
@@ -218,6 +226,7 @@
 						dir_sum = 2 //These translate the dir_sum to the correct dirs from the 'tabledir' icon_state.
 		if(dir_sum%16 == 15)
 			table_type = 4 //4-way intersection, the 'middle' table sprites will be used.
+		tableform = table_type
 		switch(table_type)
 			if(0)
 				icon_state = "[initial(icon_state)]"
@@ -349,6 +358,9 @@
 
 /obj/structure/table/MouseDropTo(atom/movable/O,mob/user,src_location,over_location,src_control,over_control,params)
 	if(O == user)
+		if(arcanetampered)
+			if (TryToThrowOnTable(user,user))
+				return
 		if(!ishigherbeing(user) || !Adjacent(user) || user.incapacitated() || user.lying) // Doesn't work if you're not dragging yourself, not a human, not in range or incapacitated
 			return
 		var/mob/living/carbon/M = user
@@ -362,13 +374,23 @@
 	return ..()
 
 /obj/structure/table/proc/TryToThrowOnTable(var/mob/user,var/mob/victim)
+	var/turf/oldloc = get_turf(victim)
 	for (var/atom/A in loc)
 		if (A == src || A == victim || A == user)
 			continue
-		if (!A.Cross(victim,get_turf(victim)))
+		if (!A.Cross(victim,oldloc))
 			to_chat(user, "<span class='warning'>\The [A] prevents you from dragging \the [victim] on top of \the [src]</span>")
 			return FALSE
 	victim.forceMove(loc)
+	if(arcanetampered)
+		var/turf/throwturf = get_turf(src)
+		var/throwdir = get_dir(throwturf,oldloc)
+		while(throwturf.Cross(victim) && throwturf.x < world.maxx && throwturf.y < world.maxy && throwturf.x > 0 & throwturf.y > 0)
+			throwturf = get_step(throwturf,throwdir)
+		to_chat(user, "<span class='sinister'>\The [src] flings you back!</span>")
+		user.Stun(10)
+		user.Knockdown(10)
+		victim.throw_at(throwturf, INFINITY, 10)
 	return TRUE
 
 /obj/structure/table/attackby(obj/item/W as obj, mob/user as mob, params)
@@ -403,6 +425,7 @@
 			qdel(W)
 			return
 
+	//these should maybe be moved into something like W.table_act()
 	if (W.is_wrench(user) && can_disassemble())
 		to_chat(user, "<span class='notice'>Now disassembling table...</span>")
 		W.playtoolsound(src, 50)
@@ -410,7 +433,17 @@
 			destroy()
 		return
 
-	if(user.drop_item(W, src.loc))
+	if (istype(W, /obj/item/weapon/reagent_containers/pan) && user.a_intent == I_DISARM)
+		var/obj/item/weapon/reagent_containers/pan/P = W
+		if(P.drop_ingredients(src))
+			return
+
+	if (istype(W, /obj/item/weapon/cookiesynth))
+		var/obj/item/weapon/cookiesynth/C = W
+		C.synthesize()
+		return
+
+	if (user.drop_item(W, src.loc))
 		if(W.loc == src.loc && params)
 			W.setPixelOffsetsFromParams(params, user, pixel_x, pixel_y)
 			return 1
@@ -440,6 +473,9 @@
 		return 0
 	return 1
 
+/obj/structure/table/arcane_act(mob/user)
+	..()
+	return "'N S'VIET R'SIA...!"
 
 /obj/structure/table/verb/do_flip()
 	set name = "Flip table"
@@ -450,6 +486,12 @@
 		return
 	if (!can_touch(usr))
 		return
+	if(arcanetampered)
+		var/mob/living/M = usr
+		if(istype(M))
+			to_chat(usr, "<span class='sinister'>[capitalize(name)] flips YOU!</span>")
+			M.Knockdown(10)
+			return
 	if(!flip(get_cardinal_dir(usr,src)))
 		to_chat(usr, "<span class='notice'>It won't budge.</span>")
 	else
@@ -510,6 +552,8 @@
 		var/obj/structure/table/T = locate() in get_step(src,D)
 		if(T && !T.flipped)
 			T.flip(direction)
+	for(var/obj/machinery/M in loc)
+		M.table_unshift()
 	update_icon()
 	update_adjacent()
 
@@ -527,6 +571,8 @@
 		var/obj/structure/table/T = locate() in get_step(src.loc,D)
 		if(T && T.flipped && T.dir == src.dir)
 			T.unflip()
+	for(var/obj/machinery/M in loc)
+		M.table_shift()
 	update_icon()
 	update_adjacent()
 
@@ -552,8 +598,10 @@
 	icon_state = "woodtable"
 	parts = /obj/item/weapon/table_parts/wood
 	health = 50
-	autoignition_temperature = AUTOIGNITION_WOOD // TODO:  Special ash subtype that looks like charred table legs.
-	fire_fuel = 5
+	w_class = W_CLASS_LARGE
+	w_type = RECYK_WOOD
+	flammable = TRUE
+
 
 /obj/structure/table/woodentable/cultify()
 	return
@@ -703,6 +751,9 @@
 	desc = "A plastic table perfect for on a space patio."
 	icon_state = "plastictable"
 	parts = /obj/item/weapon/table_parts/plastic
+	w_class = W_CLASS_LARGE
+	w_type = RECYK_PLASTIC
+	flammable = TRUE
 
 /*
  * Racks
@@ -742,14 +793,14 @@
 			destroy(FALSE)
 		if(2.0)
 			if(prob(50))
-				destroy(TRUE)
-			else
 				destroy(FALSE)
+			else
+				destroy(TRUE)
 		if(3.0)
 			if(prob(25))
-				destroy(TRUE)
-			else
 				destroy(FALSE)
+			else
+				destroy(TRUE)
 
 /obj/structure/rack/proc/checkhealth()
 	if(health <= 0)

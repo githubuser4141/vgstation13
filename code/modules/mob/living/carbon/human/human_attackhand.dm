@@ -1,9 +1,9 @@
 //BITES
-/mob/living/carbon/human/bite_act(mob/living/carbon/human/M as mob)
+/mob/living/carbon/human/bite_act(mob/living/carbon/human/M as mob, arcaneoverride = FALSE)
 
 	var/dam_check = !(istype(loc, /turf) && istype(loc.loc, /area/start)) // 0 or 1
 
-	if(M == src)
+	if(M == src && !arcaneoverride)
 		return //Can't bite yourself
 
 	//Vampire code
@@ -25,11 +25,7 @@
 			if(!V.silentbite)
 				playsound(loc, 'sound/weapons/bite.ogg', 50, 1, -1)
 				src.visible_message("<span class='danger'>\The [M] has bitten \the [src]!</span>", "<span class='userdanger'>You were bitten by \the [M]!</span>")
-			else
-				to_chat(M, "<span class='danger'>You start to slowly reach for [src]'s neck to bite it!.</span>")
-			var/mature = (locate(/datum/power/vampire/mature) in V.current_powers) ? 2 : 1
-			if(!V.silentbite || do_mob(M, src, (30 SECONDS) / mature))
-				V.handle_bloodsucking(src)
+			V.handle_bloodsucking(src)
 			return
 	//end vampire code
 
@@ -81,12 +77,8 @@
 
 	M.attack_log += text("\[[time_stamp()]\] <font color='red'>bit [src.name] ([src.ckey]) for [damage] damage</font>")
 	src.attack_log += text("\[[time_stamp()]\] <font color='orange'>Has been bitten by [M.name] ([M.ckey]) for [damage] damage</font>")
-	if(!iscarbon(M))
-		LAssailant = null
-	else
-		LAssailant = M
-		assaulted_by(M)
-	log_attack("[M.name] ([M.ckey]) bitten by [src.name] ([src.ckey])")
+	assaulted_by(M)
+	log_attack("[src.name] ([src.ckey]) bitten by [M.name] ([M.ckey])")
 
 	return
 
@@ -181,11 +173,7 @@
 
 	M.attack_log += text("\[[time_stamp()]\] <font color='red'>Kicked [src.name] ([src.ckey]) for [damage] damage</font>")
 	src.attack_log += text("\[[time_stamp()]\] <font color='orange'>Has been kicked by [M.name] ([M.ckey]) for [damage] damage</font>")
-	if(!iscarbon(M))
-		LAssailant = null
-	else
-		LAssailant = M
-		assaulted_by(M)
+	assaulted_by(M)
 	log_attack("[src.name] ([src.ckey]) kicked by [M.name] ([M.ckey])")
 
 /mob/living/carbon/human/proc/attack_hand_contact_diseases(var/mob/living/carbon/human/M, var/datum/organ/external/affecting_override = null, var/kick = FALSE, var/bite = FALSE)
@@ -290,8 +278,8 @@
 				if (punch_zone == TARGET_EYES || punch_zone == TARGET_MOUTH)
 					punch_zone = LIMB_HEAD
 				var/datum/organ/external/limb = organs_by_name[punch_zone]
-				if(limb.status & ORGAN_BLEEDING)
-					M.bloody_hands(src,1)
+				if(limb.status & ORGAN_BLEEDING && istype(M))
+					M.bloody_hands(src, 2)
 				return punch_damage
 			else // dodged
 				return 0

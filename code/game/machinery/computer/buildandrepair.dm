@@ -4,7 +4,7 @@
 	density = 1
 	anchored = 0
 	name = "computer frame"
-	desc = "A metal frame ready to recieve a circuit board, wires and a glass panel."
+	desc = "A metal frame ready to receive a circuit board, wires and a glass panel."
 	icon = 'icons/obj/stock_parts.dmi'
 	icon_state = "0"
 	var/state = 0
@@ -14,8 +14,7 @@
 
 /obj/structure/computerframe/Destroy()
 	..()
-	qdel(circuit)
-	circuit = null
+	QDEL_NULL(circuit)
 
 /obj/item/weapon/circuitboard
 	density = 0
@@ -73,7 +72,7 @@
 	name = "Circuit board (Long Range AI Upload)"
 	desc = "A circuit board for running a computer used for modifying AI laws."
 	build_path = /obj/machinery/computer/aiupload/longrange
-	origin_tech = Tc_PROGRAMMING + "=4" + Tc_MATERIALS + "=9" + Tc_BLUESPACE + "=3" + Tc_MAGNETS + "=5"
+	origin_tech = Tc_PROGRAMMING + "=4;" + Tc_MATERIALS + "=9;" + Tc_BLUESPACE + "=3;" + Tc_MAGNETS + "=5"
 /obj/item/weapon/circuitboard/borgupload
 	name = "Circuit board (Cyborg Upload)"
 	desc = "A circuit board for running a computer used for modifying cyborg laws."
@@ -104,7 +103,7 @@
 	build_path = /obj/machinery/computer/card
 /obj/item/weapon/circuitboard/card/centcom
 	name = "Circuit board (CentCom ID Computer)"
-	desc = "A circuit board for running a computer used for granting access to areas at Central Command.."
+	desc = "A circuit board for running a computer used for granting access to areas at Central Command."
 	build_path = /obj/machinery/computer/card/centcom
 //obj/item/weapon/circuitboard/shield
 //	name = "Circuit board (Shield Control)"
@@ -356,6 +355,8 @@
 	build_path = /obj/machinery/computer/stacking_unit
 	origin_tech = Tc_PROGRAMMING + "=2;" + Tc_MATERIALS + "=2"
 
+
+
 /obj/item/weapon/circuitboard/attackby(obj/item/I as obj, mob/user as mob)
 	if(issolder(I))
 		var/obj/item/tool/solder/S = I
@@ -364,15 +365,10 @@
 	else if(iswelder(I))
 		var/obj/item/tool/weldingtool/WT = I
 		if(WT.remove_fuel(1,user))
-			var/obj/item/weapon/circuitboard/blank/B = new /obj/item/weapon/circuitboard/blank(src.loc)
-			to_chat(user, "<span class='notice'>You melt away the circuitry, leaving behind a blank.</span>")
-			I.playtoolsound(B.loc, 30)
-			if(user.get_inactive_hand() == src)
-				user.before_take_item(src)
-				user.put_in_hands(B)
-			qdel(src)
-			return
-	return
+			I.playtoolsound(loc, 30)
+			user.create_in_hands(src, /obj/item/weapon/circuitboard/blank, msg = "<span class='notice'>You melt away the circuitry, leaving behind a blank.</span>")
+	else
+		return ..()
 
 /obj/item/weapon/circuitboard/proc/solder_improve(mob/user)
 	to_chat(user, "<span class='warning'>You fiddle with a few random fuses but can't find a routing that doesn't short the board.</span>")
@@ -396,6 +392,8 @@
 /obj/item/weapon/circuitboard/supplycomp/solder_improve(mob/user)
 	to_chat(user, "<span class='notice'>You [contraband_enabled ? "" : "un"]connect the mysterious fuse.</span>")
 	contraband_enabled = !contraband_enabled
+
+
 
 /obj/structure/computerframe/attackby(obj/item/P as obj, mob/user as mob)
 	switch(state)
@@ -513,7 +511,10 @@
 					to_chat(user, "<span class='warning'>You connect the monitor, but nothing turns on!</span>")
 					return
 				to_chat(user, "<span class='notice'>You connect the monitor.</span>")
-				var/B = new src.circuit.build_path ( src.loc )
+				var/buildpath = src.circuit.build_path
+				if(arcanetampered || circuit.arcanetampered)
+					buildpath = pick(subtypesof(/obj/machinery/computer/fluff))
+				var/B = new buildpath ( src.loc )
 				if(circuit.powernet)
 					B:powernet = circuit.powernet
 				if(circuit.id_tag)

@@ -18,6 +18,7 @@ var/global/msg_id = 0
 	w_class = W_CLASS_TINY
 	flags = FPRINT
 	slot_flags = SLOT_ID | SLOT_BELT
+	quick_equip_priority = list(slot_wear_id)
 
 	//Main variables
 	var/owner = null
@@ -43,6 +44,7 @@ var/global/msg_id = 0
 
 	var/obj/item/device/paicard/pai = null	// A slot for a personal AI device
 	var/obj/item/weapon/photo/photo = null	// A slot for a photo
+	var/obj/item/weapon/pen/pen = null	// A slot for a pen
 
 	var/MM = null
 	var/DD = null
@@ -78,7 +80,7 @@ var/global/msg_id = 0
 		// PDA being given out to people during the cuck cube
 		if(ticker && ticker.current_state >= GAME_STATE_SETTING_UP)
 			cartridge.initialize()
-	new /obj/item/weapon/pen(src)
+	pen = new /obj/item/weapon/pen(src)
 	MM = text2num(time2text(world.timeofday, "MM")) 	// get the current month
 	DD = text2num(time2text(world.timeofday, "DD")) 	// get the day
 
@@ -335,6 +337,27 @@ var/global/msg_id = 0
 	id = null
 	return TRUE
 
+/obj/item/device/pda/proc/toggle_flashlight(mob/user)
+	if(user.incapacitated())
+		to_chat(user, "<span class='notice'>You cannot do this while restrained.</span>")
+		return FALSE
+
+	if(!in_range(src, user))
+		to_chat(user, "<span class='notice'>You are too far away.</span>")
+		return FALSE
+
+	for(var/app in applications)
+		if(istype(app,/datum/pda_app/light))
+			var/datum/pda_app/light/flash = app
+			flash.on_select()
+
+/obj/item/device/pda/verb/verb_flashlight()
+	set category = "Object"
+	set name = "Toggle Flashlight"
+	set src in usr
+
+	toggle_flashlight(usr)
+
 /obj/item/device/pda/verb/verb_remove_id()
 	set category = "Object"
 	set name = "Remove ID"
@@ -360,13 +383,13 @@ var/global/msg_id = 0
 		to_chat(user, "<span class='notice'>You are too far away.</span>")
 		return FALSE
 
-	var/obj/item/weapon/pen/O = locate() in src
-	if(!O)
+	if(!pen)
 		to_chat(user, "<span class='notice'>This PDA does not have a pen in it.</span>")
 		return FALSE
 
-	user.put_in_hands(O)
-	to_chat(user, "<span class='notice'>You remove \the [O] from \the [src].</span>")
+	user.put_in_hands(pen)
+	to_chat(user, "<span class='notice'>You remove \the [pen] from \the [src].</span>")
+	pen = null
 	return TRUE
 
 
@@ -452,22 +475,34 @@ var/global/msg_id = 0
 			photo = C
 			to_chat(user, "<span class='notice'>You slot \the [C] into [src].</span>")
 			updateUsrDialog()
-	else if(istype(C, /obj/item/weapon/pen))
-		var/obj/item/weapon/pen/O = locate() in src
-		if(O)
-			to_chat(user, "<span class='notice'>There is already a pen in \the [src].</span>")
-		else
-			if(user.drop_item(C, src))
-				to_chat(user, "<span class='notice'>You slide \the [C] into \the [src].</span>")
+	else if(istype(C, /obj/item/weapon/pen) && !src.pen)
+		if(user.drop_item(C, src))
+			pen = C
+			to_chat(user, "<span class='notice'>You slide \the [C] into \the [src].</span>")
 	else if(istype(C,/obj/item/weapon/spacecash))
 		if(!id)
 			to_chat(user, "[bicon(src)]<span class='warning'>There is no ID in the PDA!</span>")
 			return
 		var/obj/item/weapon/spacecash/dosh = C
-		if(add_to_virtual_wallet(dosh.worth * dosh.amount, user))
-			to_chat(user, "<span class='info'>You insert [dosh.worth * dosh.amount] credit\s into the PDA.</span>")
+		var/multiplier = dosh.arcanetampered ? rand(0,99) : 100
+		if(add_to_virtual_wallet(round(dosh.worth * dosh.amount * (multiplier/100)), user))
+			to_chat(user, "<span class='info'>You insert [round(dosh.worth * dosh.amount * (multiplier/100))] credit\s into the PDA.</span>")
 			qdel(dosh)
 		updateDialog()
+
+/obj/item/device/pda/can_quick_store(var/obj/item/I)
+	if(istype(I,/obj/item/weapon/card/id))
+		var/obj/item/weapon/card/id/idcard = I
+		return !id && idcard.registered_name
+	return (istype(I,/obj/item/weapon/cartridge) && !cartridge) ||\
+			(istype(I,/obj/item/device/paicard) && !pai) ||\
+			(istype(I,/obj/item/weapon/photo) && !photo) ||\
+			(istype(I,/obj/item/weapon/pen) && !pen) ||\
+			(istype(I,/obj/item/weapon/spacecash) && id && id.virtual_wallet)
+
+/obj/item/device/pda/quick_store(var/obj/item/I,mob/user)
+	..()
+	return !(attackby(I,user))
 
 /obj/item/device/pda/proc/add_to_virtual_wallet(var/amount, var/mob/user, var/atom/giver)
 	if(!id)
@@ -506,7 +541,7 @@ var/global/msg_id = 0
 		M.show_message("<span class='warning'>Your [src] explodes!</span>", 1)
 
 	if(T)
-		T.hotspot_expose(700,125,surfaces=istype(loc,/turf))
+		try_hotspot_expose(700,SMALL_FLAME,0)
 
 		explosion(T, -1, -1, 2, 3, whodunnit = user)
 
@@ -527,8 +562,7 @@ var/global/msg_id = 0
 	if(cartridge)
 		if (cartridge.radio)
 			cartridge.radio.hostpda = null
-		qdel(cartridge)
-		cartridge = null
+		QDEL_NULL(cartridge)
 
 	for(var/A in applications)
 		qdel(A)

@@ -1,6 +1,3 @@
-var/global/list/visible_spaces = list(/turf/simulated/open, /turf/simulated/floor/glass)
-
-#define isvisiblespace(A) is_type_in_list(A, visible_spaces)
 #define OPENSPACE_PLANE_START -23
 #define OPENSPACE_PLANE_END -8
 #define OPENSPACE_PLANE -25
@@ -33,8 +30,8 @@ var/global/list/visible_spaces = list(/turf/simulated/open, /turf/simulated/floo
 /proc/get_zs_away(atom/Loc1,atom/Loc2)
 	if(Loc1.z == Loc2.z)
 		return 0 // Nip this in the bud to save performance maybe
-	if(!AreConnectedZLevels(Loc1.z, Loc2.z))
-		return INFINITY // Redundant to below but sanity checking
+	if(!(HasAbove(Loc1.z) && HasBelow(Loc1.z)) || !(HasAbove(Loc2.z) && HasBelow(Loc2.z)) || !AreConnectedZLevels(Loc1.z, Loc2.z))
+		return INFINITY // Redundant to below but sanity checking and performance
 
 	var/dist_above = 0
 	var/dist_below = 0

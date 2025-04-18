@@ -138,6 +138,10 @@
 
 
 /obj/machinery/computer/med_data/attackby(var/obj/item/O, var/mob/living/user)
+	if(istype(O, /obj/item/weapon/card/id) && !scan)
+		if(usr.drop_item(O, src))
+			scan = O
+			to_chat(user, "You insert \the [O].")
 	if (istype(user) && authenticated && (screen == 4.0) && active1)
 		if(istype(O, /obj/item/weapon/photo/id))
 			var/obj/item/weapon/photo/id/photo_id = O
@@ -262,8 +266,7 @@
 
 			if (href_list["del_all2"])
 				for(var/datum/data/record/R in data_core.medical)
-					qdel(R)
-					R = null
+					QDEL_NULL(R)
 					//Foreach goto(494)
 				temp = "All records deleted."
 
@@ -460,8 +463,7 @@
 
 			if (href_list["del_r2"])
 				if (active2)
-					qdel(active2)
-					active2 = null
+					QDEL_NULL(active2)
 
 			if (href_list["d_rec"])
 				var/datum/data/record/R = locate(href_list["d_rec"])
@@ -587,8 +589,7 @@
 			continue
 
 		else if(prob(1))
-			qdel(R)
-			R = null
+			QDEL_NULL(R)
 			continue
 
 	..(severity)
@@ -598,10 +599,13 @@
 	name = "Medical Laptop"
 	desc = "A cheap laptop connected to the medical records."
 	icon_state = "medlaptop"
-	pass_flags = PASSTABLE
+	moody_state = "overlay_laptop"
+	pass_flags = PASSTABLE | PASSRAILING
 	machine_flags = 0
 
 	anchored = 0
 	density = 0
 
 	light_color = LIGHT_COLOR_GREEN
+
+	computer_flags = NO_ONOFF_ANIMS

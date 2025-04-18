@@ -9,6 +9,9 @@
 	icon_state = "dispenser"
 	use_power = MACHINE_POWER_USE_IDLE
 	idle_power_usage = 40
+	slimeadd_message = "You throw the slime into the dispenser's tank"
+	slimes_accepted = SLIME_BLACK|SLIME_PYRITE
+	slimeadd_success_message = "A new option appears on the dispenser screen"
 	var/energy = 0
 	var/max_energy = 50
 	var/rechargerate = 2
@@ -20,6 +23,7 @@
 	var/useramount = 30 // Last used amount
 	var/required_quirk = MODULE_CAN_HANDLE_CHEMS
 	var/template_path = "chem_dispenser.tmpl"
+	var/list/slime_reagents = list("black" = DSYRUP, "pyrite" = COLORFUL_REAGENT)
 	var/list/dispensable_reagents = list(
 		HYDROGEN,
 		LITHIUM,
@@ -44,7 +48,11 @@
 		SACID,
 		TUNGSTEN
 		)
-	machine_flags = SCREWTOGGLE | CROWDESTROY | WRENCHMOVE | FIXED2WORK
+	var/upgraded = 0
+	var/list/upgrade_chems = list(
+		PLASMA
+		)
+	machine_flags = SCREWTOGGLE | CROWDESTROY | WRENCHMOVE | FIXED2WORK | EMAGGABLE
 /*
 USE THIS CHEMISTRY DISPENSER FOR MAPS SO THEY START AT 100 ENERGY
 */
@@ -70,27 +78,40 @@ USE THIS CHEMISTRY DISPENSER FOR MAPS SO THEY START AT 100 ENERGY
 		/obj/item/weapon/stock_parts/micro_laser,
 		/obj/item/weapon/stock_parts/console_screen
 	)
+	if(Holiday != APRIL_FOOLS_DAY)
+		verbs -= /obj/machinery/chem_dispenser/verb/undeploy_dispenser
 
 	RefreshParts()
 	if(dispensable_reagents)
 		dispensable_reagents = sortList(dispensable_reagents)
 
 /obj/machinery/chem_dispenser/RefreshParts()
+	var/R = 0
 	var/T = 0
 	for(var/obj/item/weapon/stock_parts/manipulator/M in component_parts)
 		T += M.rating-1
+		R += M.rating
 	max_energy = initial(max_energy)+(T * 50 / 4)
 
 	T = 0
 	for(var/obj/item/weapon/stock_parts/micro_laser/Ma in component_parts)
 		T += Ma.rating-1
+		R += Ma.rating
 	rechargerate = initial(rechargerate) + (T / 2)
 
-/*
-	for(var/obj/item/weapon/stock_parts/scanning_module/Ml in component_parts)
-		T += Ml.rating
-	//Who even knows what to use the scanning module for
-*/
+	for(var/obj/item/weapon/stock_parts/scanning_module/Ml in component_parts) //Now we know what to use the scanning module for
+		R += Ml.rating
+
+	if(R >= 28) //Tier 4 parts
+		upgraded = 1
+	else
+		upgraded = 0
+	update_chem_list()
+
+/obj/machinery/chem_dispenser/proc/update_chem_list()
+	dispensable_reagents.Remove(upgrade_chems) //Reset the list
+	if(upgraded)
+		dispensable_reagents.Add(upgrade_chems)
 
 /obj/machinery/chem_dispenser/proc/recharge()
 	if(stat & (BROKEN|NOPOWER|FORCEDISABLE))
@@ -108,6 +129,10 @@ USE THIS CHEMISTRY DISPENSER FOR MAPS SO THEY START AT 100 ENERGY
 		spawn(rand(0, 15))
 			stat |= NOPOWER
 	nanomanager.update_uis(src) // update all UIs attached to src
+
+/obj/machinery/chem_dispenser/emag_act()
+	..()
+	dispensable_reagents = shuffle(dispensable_reagents)
 
 /obj/machinery/chem_dispenser/proc/can_use(var/mob/living/silicon/robot/R)
 	if(!R)
@@ -274,8 +299,7 @@ USE THIS CHEMISTRY DISPENSER FOR MAPS SO THEY START AT 100 ENERGY
 			if(!B.gcDestroyed)
 				B.create_reagents(B.volume)
 			else
-				qdel(B)
-				B = null
+				QDEL_NULL(B)
 				return
 		var/space = R.maximum_volume - R.total_volume
 		var/reagent_temperature = dispensable_reagents[reagent] ? dispensable_reagents[reagent] : T0C+20
@@ -331,6 +355,9 @@ USE THIS CHEMISTRY DISPENSER FOR MAPS SO THEY START AT 100 ENERGY
 			return FALSE
 	return FALSE
 
+/obj/machinery/chem_dispenser/splashable()
+	return FALSE
+
 /obj/machinery/chem_dispenser/attackby(var/obj/item/weapon/D as obj, var/mob/user as mob, params) //to be worked on
 	if(..())
 		return 1
@@ -347,8 +374,7 @@ USE THIS CHEMISTRY DISPENSER FOR MAPS SO THEY START AT 100 ENERGY
 			to_chat(user, "<span class='warning'>\The [D] is too big to fit.</span>")
 			return
 		else if(!panel_open)
-			if(!user.drop_item(D, src))
-				to_chat(user, "<span class='warning'>You can't let go of \the [D]!</span>")
+			if(!user.drop_item(D, src, failmsg = TRUE))
 				return
 
 			container =  D
@@ -363,12 +389,13 @@ USE THIS CHEMISTRY DISPENSER FOR MAPS SO THEY START AT 100 ENERGY
 			return
 
 /obj/machinery/chem_dispenser/slime_act(primarytype, mob/user)
-	..()
-	if(primarytype == /mob/living/carbon/slime/black)
-		has_slime=1
-		dispensable_reagents.Add(DSYRUP)
-		to_chat(user, "You throw the slime into the dispenser's tank.")
-		return TRUE
+	. = ..()
+	if(. && (slimes_accepted & primarytype))
+		switch(primarytype)
+			if(SLIME_BLACK)
+				dispensable_reagents.Add(slime_reagents["black"])
+			if(SLIME_PYRITE)
+				dispensable_reagents.Add(slime_reagents["pyrite"])
 
 /obj/machinery/chem_dispenser/attack_paw(mob/user as mob)
 	return src.attack_hand(user)
@@ -427,17 +454,18 @@ USE THIS CHEMISTRY DISPENSER FOR MAPS SO THEY START AT 100 ENERGY
 	icon_state = "brewer"
 	pass_flags = PASSTABLE
 	required_quirk = MODULE_CAN_HANDLE_FOOD
+	slime_reagents = list("black" = BLOOD, "pyrite" = BANANA)
 	dispensable_reagents = list(
-		TEA,
-		GREENTEA,
-		REDTEA,
-		COFFEE,
-		MILK,
-		CREAM,
-		WATER,
-		HOT_COCO,
-		SOYMILK
-		)
+		TEA = COOKTEMP_READY,
+		GREENTEA = COOKTEMP_READY,
+		REDTEA = COOKTEMP_READY,
+		COFFEE = COOKTEMP_READY,
+		MILK = COOKTEMP_READY,
+		CREAM = COOKTEMP_READY,
+		WATER = COOKTEMP_READY,
+		HOT_COCO = COOKTEMP_READY,
+		SOYMILK = COOKTEMP_READY
+		)//everything is HOT out of here
 
 /obj/machinery/chem_dispenser/brewer/New()
 	. = ..()
@@ -453,6 +481,9 @@ USE THIS CHEMISTRY DISPENSER FOR MAPS SO THEY START AT 100 ENERGY
 		/obj/item/weapon/stock_parts/console_screen
 	)
 	RefreshParts()
+
+/obj/machinery/chem_dispenser/brewer/update_chem_list()
+	return
 
 /obj/machinery/chem_dispenser/brewer/suicide_act(var/mob/living/user)
 	to_chat(viewers(user), "<span class='danger'>[user] is placing \his mouth under the nozzles of the [src] and filling it! It looks like \he's trying to commit suicide.</span>")
@@ -471,6 +502,7 @@ USE THIS CHEMISTRY DISPENSER FOR MAPS SO THEY START AT 100 ENERGY
 	pass_flags = PASSTABLE
 	beaker_height = -5
 	required_quirk = MODULE_CAN_HANDLE_FOOD
+	slime_reagents = list("black" = TRICORDRAZINE, "pyrite" = BANANA)
 	dispensable_reagents = list(SPACEMOUNTAINWIND, SODAWATER, LEMON_LIME, DR_GIBB, COLA, ICE = T0C, TONIC)
 
 /obj/machinery/chem_dispenser/soda_dispenser/New()
@@ -488,6 +520,9 @@ USE THIS CHEMISTRY DISPENSER FOR MAPS SO THEY START AT 100 ENERGY
 	)
 	RefreshParts()
 
+/obj/machinery/chem_dispenser/soda_dispenser/update_chem_list()
+	return
+
 /obj/machinery/chem_dispenser/soda_dispenser/suicide_act(var/mob/living/user)
 	to_chat(viewers(user), "<span class='danger'>[user] is placing \his mouth under the nozzles of the [src] and filling it! It looks like \he's trying to commit suicide.</span>")
 	playsound(src, 'sound/effects/bubbles.ogg', 80, 1)
@@ -503,6 +538,7 @@ USE THIS CHEMISTRY DISPENSER FOR MAPS SO THEY START AT 100 ENERGY
 	pass_flags = PASSTABLE
 	beaker_height = -6
 	required_quirk = MODULE_CAN_HANDLE_FOOD
+	slime_reagents = list("black" = TRICORDRAZINE, "pyrite" = BANANA)
 	dispensable_reagents = list(
 		BEER,
 		WHISKEY,
@@ -520,7 +556,7 @@ USE THIS CHEMISTRY DISPENSER FOR MAPS SO THEY START AT 100 ENERGY
 		BLUECURACAO,
 		KAHLUA,
 		ALE,
-		ICE = T0C,
+		ICE = (T0C-20),
 		WATER,
 		GIN,
 		SODAWATER,
@@ -546,6 +582,16 @@ USE THIS CHEMISTRY DISPENSER FOR MAPS SO THEY START AT 100 ENERGY
 		/obj/item/weapon/stock_parts/console_screen
 	)
 	RefreshParts()
+
+/obj/machinery/chem_dispenser/booze_dispenser/update_chem_list()
+	if(!upgraded)
+		dispensable_reagents = list(BEER,WHISKEY,TEQUILA,VODKA,VERMOUTH,RUM,COGNAC,WINE,SAKE,TRIPLESEC,BITTERS,CINNAMONWHISKY,SCHNAPPS,
+									BLUECURACAO,KAHLUA,ALE,ICE = T0C,WATER,GIN,SODAWATER,COLA,CREAM,TOMATOJUICE,ORANGEJUICE,LIMEJUICE,TONIC)
+	else
+		dispensable_reagents = list(BEER,WHISKEY,TEQUILA,VODKA,VERMOUTH,RUM,COGNAC,WINE,SAKE,TRIPLESEC,BITTERS,CINNAMONWHISKY,SCHNAPPS,
+									BLUECURACAO,KAHLUA,ALE,ICE = T0C,WATER,GIN,SODAWATER,COLA,CREAM,TOMATOJUICE,ORANGEJUICE,LIMEJUICE,TONIC,
+									KARMOTRINE)
+
 
 /obj/machinery/chem_dispenser/booze_dispenser/suicide_act(var/mob/living/user)
 	to_chat(viewers(user), "<span class='danger'>[user] is placing \his mouth under the nozzles of the [src] and drowning his sorrows! It looks like \he's trying to commit suicide.</span>")
@@ -578,6 +624,9 @@ USE THIS CHEMISTRY DISPENSER FOR MAPS SO THEY START AT 100 ENERGY
 		)
 	machine_flags = SCREWTOGGLE | WRENCHMOVE | FIXED2WORK
 
+/obj/machinery/chem_dispenser/condiment/update_chem_list()
+	return
+
 /obj/machinery/chem_dispenser/condiment/can_insert(obj/item/I)
 	return istype(I,/obj/item/weapon/reagent_containers/food/snacks) || istype(I,/obj/item/weapon/reagent_containers/food/condiment)
 
@@ -600,3 +649,16 @@ USE THIS CHEMISTRY DISPENSER FOR MAPS SO THEY START AT 100 ENERGY
 	message_admins("[key_name(L)] has dispensed [reagent] ([amount]u)! [formatJumpTo(src)]")
 
 	dispense_reagent(reagent, amount)
+
+/obj/machinery/chem_dispenser/verb/undeploy_dispenser()
+	set category = "Object"
+	set name = "Undeploy dispenser"
+	set src in view(1)
+	if(usr.incapacitated())
+		to_chat(usr, "<span class='notice'>You cannot do this while incapacitated.</span>")
+		return
+	if(!usr.dexterity_check())
+		to_chat(usr, "<span class='notice'>You are not capable of such fine manipulation.</span>")
+		return
+	move_that_gear_up()
+	

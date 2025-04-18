@@ -6,6 +6,8 @@
 	icon_state = "barricade_kit"
 	flags = FPRINT
 	w_class = W_CLASS_MEDIUM
+	w_type = RECYK_WOOD
+	flammable = TRUE
 	force = 3
 	throwforce = 3
 	throw_speed = 1
