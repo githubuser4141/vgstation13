@@ -4,7 +4,7 @@
 	origin_tech = Tc_MATERIALS + "=3;" + Tc_COMBAT + "=3"
 	var/projectile
 	var/fire_sound
-
+	equip_type = EQUIP_WEAPON
 
 /obj/item/mecha_parts/mecha_equipment/weapon/can_attach(var/obj/mecha/combat/M as obj, var/override = FALSE)
 	if(..())
@@ -107,6 +107,8 @@
 	icon_state = "mecha_honker"
 	energy_drain = 200
 	equip_cooldown = 150
+	equip_slot = BACK
+	need_colorize = FALSE
 	range = MELEE|RANGED
 
 /obj/item/mecha_parts/mecha_equipment/weapon/honker/can_attach(obj/mecha/combat/honker/M as obj)
@@ -166,6 +168,11 @@
 	var/projectiles
 	var/projectile_energy_cost
 
+	var/projectiles_cache //ammo to be loaded in, if possible.
+	var/projectiles_cache_max
+	var/disabledreload //For weapons with no cache (like the rockets) which are reloaded by hand
+	var/ammo_type = "/obj/item/ammo_casing/c9mm"
+
 /obj/item/mecha_parts/mecha_equipment/weapon/ballistic/New()
 	..()
 	projectiles = max_projectiles
@@ -190,19 +197,36 @@
 	return 0
 
 /obj/item/mecha_parts/mecha_equipment/weapon/ballistic/get_equip_info()
-	return "[..()]\[[src.projectiles]\][(src.projectiles < src.max_projectiles)?" - <a href='?src=\ref[src];rearm=1'>Rearm</a>":null]"
+	return "[..()] \[[src.projectiles][projectiles_cache_max &&!projectile_energy_cost?"/[projectiles_cache]":""]\][!disabledreload &&(src.projectiles < initial(src.projectiles))?" - <a href='?src=[ref(src)];rearm=1'>Rearm</a>":null]"
 
 /obj/item/mecha_parts/mecha_equipment/weapon/ballistic/proc/rearm()
-	if(projectiles < max_projectiles)
-		var/projectiles_to_add = max_projectiles - projectiles
-		while(chassis.get_charge() >= projectile_energy_cost && projectiles_to_add)
-			projectiles++
-			projectiles_to_add--
-			chassis.use_power(projectile_energy_cost)
-	send_byjax(chassis.occupant,"exosuit.browser","\ref[src]",src.get_equip_info())
-	log_message("Rearmed [src.name].")
-	to_chat(chassis.occupant, "<span class='notice'>Rearmed [src.name].</span>")
+	if(projectiles < initial(projectiles))
+		var/projectiles_to_add = initial(projectiles) - projectiles
+
+		if(projectile_energy_cost)
+			while(chassis.get_charge() >= projectile_energy_cost && projectiles_to_add)
+				projectiles++
+				projectiles_to_add--
+				chassis.use_power(projectile_energy_cost)
+
+		else
+			if(!projectiles_cache)
+				return FALSE
+			if(projectiles_to_add <= projectiles_cache)
+				projectiles = projectiles + projectiles_to_add
+				projectiles_cache = projectiles_cache - projectiles_to_add
+			else
+				projectiles = projectiles + projectiles_cache
+				projectiles_cache = 0
+
+		send_byjax(chassis.occupant,"exosuit.browser","[ref(src)]",src.get_equip_info())
+		to_chat(chassis.occupant, "<span class='notice'>Rearmed [src.name].</span>")
+		log_message("Rearmed [src.name].")
+		return TRUE
+
+
 	return
+
 
 /obj/item/mecha_parts/mecha_equipment/weapon/ballistic/Topic(href, href_list)
 	if(..())
@@ -210,7 +234,6 @@
 	if (href_list["rearm"])
 		src.rearm()
 	return
-
 
 /obj/item/mecha_parts/mecha_equipment/weapon/ballistic/scattershot
 	name = "\improper LBX AC 10 \"Scattershot\""
@@ -220,6 +243,8 @@
 	fire_sound = 'sound/weapons/shotgun.ogg'
 	max_projectiles = 20
 	projectile_energy_cost = 25
+	projectiles_cache = 50
+	projectiles_cache_max = 50
 	var/projectiles_per_shot = 1
 	var/deviation = 0.7  //the shots were perfectly accurate no matter what this was set to
 
@@ -231,12 +256,7 @@
 	var/turf/targloc = get_turf(target)
 	if(!curloc || !targloc)
 		return
-//	var/target_x = targloc.x
-//	var/target_y = targloc.y
-//	var/target_z = targloc.z
-//	targloc = null
 	for(var/i=1 to min(projectiles, projectiles_per_shot))
-//		targloc = locate(target_x+GaussRandRound(deviation,1),target_y+GaussRandRound(deviation,1),target_z)
 		if(defective)
 			target = get_inaccuracy(originaltarget, 2, chassis)
 			targloc = get_turf(target)
@@ -260,8 +280,6 @@
 	do_after_cooldown()
 	return
 
-
-
 /obj/item/mecha_parts/mecha_equipment/weapon/ballistic/lmg
 	name = "\improper Ultra AC 2"
 	icon_state = "mecha_uac2"
@@ -270,6 +288,8 @@
 	fire_sound = 'sound/weapons/Gunshot_smg.ogg'
 	max_projectiles = 300
 	projectile_energy_cost = 20
+	projectiles_cache = 200
+	projectiles_cache_max = 200
 	var/projectiles_per_shot = 3
 //	var/deviation = 0.3
 
@@ -314,6 +334,19 @@
 	do_after_cooldown()
 	return
 
+/obj/item/mecha_parts/mecha_equipment/weapon/ballistic/lmg/smg
+	name = "\improper exosuit-mounted Uzi"
+	desc = "A exosuit-mounted submachine gun firing 9mm rounds."
+	icon_state = "mecha_uac2"
+	equip_cooldown = 8
+	projectile = /obj/item/projectile/bullet/midbullet2
+	fire_sound = 'sound/weapons/Gunshot_smg.ogg'
+	max_projectiles = 100
+	projectile_energy_cost = 20
+	projectiles_cache = 40
+	projectiles_cache_max = 40
+	projectiles_per_shot = 1
+
 /obj/item/mecha_parts/mecha_equipment/weapon/ballistic/missile_rack
 	name = "\improper SRM-8 Missile Rack"
 	icon_state = "mecha_missilerack"
@@ -322,6 +355,7 @@
 	max_projectiles = 8
 	projectile_energy_cost = 1000
 	equip_cooldown = 60
+	equip_slot = BACK
 	var/missile_speed = 2
 	var/missile_range = 30
 
@@ -484,6 +518,7 @@
 	missile_speed = 1.5
 	projectile_energy_cost = 100
 	equip_cooldown = 20
+	need_colorize = FALSE
 
 /obj/item/mecha_parts/mecha_equipment/weapon/ballistic/missile_rack/banana_mortar/can_attach(obj/mecha/combat/honker/M as obj)
 	if(..())
@@ -514,6 +549,7 @@
 	missile_speed = 1.5
 	projectile_energy_cost = 100
 	equip_cooldown = 10
+	need_colorize = FALSE
 
 /obj/item/mecha_parts/mecha_equipment/weapon/ballistic/missile_rack/mousetrap_mortar/can_attach(obj/mecha/combat/honker/M as obj)
 	if(..())

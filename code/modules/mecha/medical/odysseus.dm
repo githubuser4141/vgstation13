@@ -3,12 +3,13 @@
 	name = "Odysseus"
 	icon_state = "odysseus"
 	initial_icon = "odysseus"
+	base_color = "#FFFFFF"
 	step_in = 2
 	max_temperature = 15000
-	health = 120
+	health = 75
 	wreckage = /obj/effect/decal/mecha_wreckage/odysseus
 	internal_damage_threshold = 35
-	deflect_chance = 15
+	deflect_chance = 5
 	step_energy_drain = 6
 	var/obj/item/clothing/glasses/hud/health/mech/hud
 	paintable = 1
@@ -18,6 +19,24 @@
 		"paramed",
 		"urinetrouble"
 	)
+
+	encumbrance_gap = 3
+	penetration_reduction = 0
+	damage_minimum = 0
+
+	max_hull_equip = 1
+	max_weapon_equip = 0
+	max_utility_equip = 2
+	max_universal_equip = 1
+	max_special_equip = 1
+
+	starting_components = list(
+		/obj/item/mecha_parts/component/hull/lightweight,
+		/obj/item/mecha_parts/component/actuator/hispeed,
+		/obj/item/mecha_parts/component/armor/lightweight,
+		/obj/item/mecha_parts/component/gas,
+		/obj/item/mecha_parts/component/electrical
+		)
 
 /obj/mecha/medical/odysseus/New()
 	..()
@@ -58,11 +77,10 @@
 	desc = "A terrifying combat-modified Medical Exosuit. You doubt this thing has ever heard of the Hippocratic Oath."
 	icon_state = "murdysseus"
 	initial_icon = "murdysseus"
-	deflect_chance = 20
+	deflect_chance = 10
 	health = 240
 	wreckage = /obj/effect/decal/mecha_wreckage/odysseus/murdysseus
 	paintable = 0
-	max_equip = 4
 
 /obj/mecha/medical/odysseus/murdysseus/New()
 	..()

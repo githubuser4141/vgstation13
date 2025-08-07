@@ -1,10 +1,10 @@
 /obj/item/mecha_parts/mecha_equipment/tool/sleeper
 	name = "\improper Mounted Sleeper"
 	desc = "Mounted Sleeper. (Can be attached to: Medical Exosuits)"
-	icon = 'icons/obj/Cryogenic2.dmi'
-	icon_state = "sleeper_0"
+	icon_state = "mecha_sleeper"
 	origin_tech = Tc_PROGRAMMING + "=2;" + Tc_BIOTECH + "=3"
 	energy_drain = 20
+	equip_slot = BACK
 	range = MELEE
 	reliability = 1000
 	equip_cooldown = 20
@@ -12,6 +12,7 @@
 	var/datum/global_iterator/pr_mech_sleeper
 	var/inject_amount = 10
 	salvageable = 0
+	equip_type = EQUIP_UTILITY
 
 /obj/item/mecha_parts/mecha_equipment/tool/sleeper/can_attach(obj/mecha/medical/M)
 	if(..())
@@ -257,6 +258,7 @@
 	var/obj/structure/cable/last_piece
 	var/obj/item/stack/cable_coil/cable
 	var/max_cable = 1000
+	equip_type = EQUIP_UTILITY
 
 /obj/item/mecha_parts/mecha_equipment/tool/cable_layer/New()
 	cable = new(src)
@@ -405,8 +407,7 @@
 /obj/item/mecha_parts/mecha_equipment/tool/syringe_gun
 	name = "\improper Exosuit-Mounted Syringe Gun"
 	desc = "Exosuit-mounted chem synthesizer with syringe gun. Reagents inside are held in stasis, so no reactions will occur. (Can be attached to: Medical Exosuits)"
-	icon = 'icons/obj/gun.dmi'
-	icon_state = "syringegun"
+	icon_state = "mecha_syringe_gun"
 	var/list/syringes
 	var/list/known_reagents
 	var/list/processed_reagents
@@ -416,9 +417,12 @@
 	energy_drain = 10
 	var/mode = 0 //0 - fire syringe, 1 - analyze reagents.
 	var/datum/global_iterator/mech_synth/synth
+	equip_slot = BACK
+	need_colorize = FALSE
 	range = MELEE|RANGED
 	equip_cooldown = 10
 	origin_tech = Tc_MATERIALS + "=3;" + Tc_BIOTECH + "=4;" + Tc_MAGNETS + "=4;" + Tc_PROGRAMMING + "=3"
+	equip_type = EQUIP_UTILITY
 
 /obj/item/mecha_parts/mecha_equipment/tool/syringe_gun/New()
 	..()
