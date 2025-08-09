@@ -912,38 +912,55 @@ Electric says if you can lock or not, hull says if outside people can simply unl
 
 	return
 
-/obj/mecha/proc/components_handle_damage(var/damage, var/type = BRUTE)
+/obj/mecha/proc/components_handle_damage(var/damage, var/type = BRUTE, var/skip_break = 0)
 	var/obj/item/mecha_parts/component/armor/AC = internal_components[MECH_ARMOR]
 
 	damage *= src.damage_absorption[type]
 
-	if(AC)
+	if(AC && AC.integrity && !skip_break)
 		var/armor_efficiency = AC.get_efficiency()
 		var/damage_change = armor_efficiency * (damage * 0.5) * AC.damage_absorption[type]
 		AC.damage_part(damage_change, type)
 		damage -= damage_change
 
+	if (damage <= 0)
+		return
+
 	var/obj/item/mecha_parts/component/hull/HC = internal_components[MECH_HULL]
 
-	if(HC)
-		if(HC.integrity)
-			var/hull_absorb = round(rand(5, 10) / 10, 0.1) * (damage * 0.5)
-			HC.damage_part(hull_absorb, type)
-			damage -= hull_absorb
+	if(HC && HC.integrity && !skip_break)
+		var/hull_absorb = round(rand(5, 10) / 10, 0.1) * (damage * 0.5)
+		HC.damage_part(hull_absorb, type)
+		damage -= hull_absorb
 
-	for(var/obj/item/mecha_parts/component/C in (internal_components - list(MECH_HULL, MECH_ARMOR)))
-		if(prob(C.relative_size))
-			var/damage_part_amt = round(damage / 4, 0.1)
-			C.damage_part(damage_part_amt)
-			damage -= damage_part_amt
+	// If the hull is destroyed, then components have a weighted chance of being damaged as well based on their relative size
+	else
+		var/list/components_to_damage = (internal_components - list(MECH_HULL, MECH_ARMOR))
+		var/list/weighted_list = list()
+		for(var/thing in components_to_damage)
+			var/obj/item/mecha_parts/component/component_item = components_to_damage[thing]
+			// FIXME : "Camera" & "Communication" are listed as component items but do not have an associated item datum
+			// So we need to do a typecheck here.
+			if (istype(component_item))
+				weighted_list[component_item] = component_item.relative_size
+		message_admins(json_encode(weighted_list))
+
+		var/comp_affected = min(4, weighted_list.len)
+		var/damage_part_amt = round(damage/comp_affected, 0.1)
+		for (var/i = 1 to comp_affected)
+			// Pick a component...
+			var/obj/item/mecha_parts/component/damaged_comp = pickweight(weighted_list)
+			// Damage it...
+			damaged_comp.damage_part(damage_part_amt)
+			message_admins("DEBUG: picked [damaged_comp] for [damage_part_amt]; before: [damage], after: [damage - damage_part_amt]")
 
 	return damage
 
 /obj/mecha/take_damage(incoming_damage, damage_type = "brute", skip_break, mute)
 	if(incoming_damage)
-		var/damage = absorbDamage(incoming_damage,damage_type)
+		var/damage = absorbDamage(incoming_damage,damage_type, skip_break)
 
-		damage = components_handle_damage(damage,damage_type)
+		damage = components_handle_damage(damage,damage_type, skip_break)
 
 		health -= damage
 
@@ -951,7 +968,9 @@ Electric says if you can lock or not, hull says if outside people can simply unl
 		log_append_to_last("Took [damage] points of damage. Damage type: \"[type]\".",1)
 	return
 
-/obj/mecha/proc/absorbDamage(damage,damage_type)
+/obj/mecha/proc/absorbDamage(damage,damage_type, skip_break)
+	if (skip_break)
+		return damage
 	return call((proc_res["dynabsorbdamage"]||src), "dynabsorbdamage")(damage,damage_type)
 
 /obj/mecha/proc/dynabsorbdamage(damage,damage_type)
@@ -1171,7 +1190,7 @@ Electric says if you can lock or not, hull says if outside people can simply unl
 			src.visible_message("The [src.name] armor deflects\the [Proj]")
 			return
 
-		src.take_damage(damage, Proj.flag)	//The take_damage() proc handles armor values
+		src.take_damage(damage, Proj.flag, Proj.penetration)	//The take_damage() proc handles armor values
 		src.check_locks()
 		if(prob(25))
 			spark(src, 2, FALSE)
