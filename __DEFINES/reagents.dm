@@ -260,6 +260,7 @@
 #define BLUECURACAO "bluecuracao"
 #define TRIPLESEC		"triplesec"
 #define BITTERS 		"bitters"
+#define CHUMPARI 		"chumpari"
 #define SCHNAPPS		"schnapps"
 #define ALE 			"ale"
 #define THIRTEENLOKO 			"thirteenloko"
@@ -486,6 +487,7 @@
 #define BLOBANINE		"blobanine"
 #define BLOB_ESSENCE	"blob_essence"
 #define METHAMPHETAMINE "methamphetamine"
+#define GRUGZONE		"grugzone"
 
 #define TUNGSTEN 			"tungsten"
 #define LITHIUMSODIUMTUNGSTATE 			"lithiumsodiumtungstate"
@@ -497,6 +499,13 @@
 #define LOCUTOGEN		"locutogen"
 #define BUMCIVILIAN		"bumcivilian"
 #define PUNCTUALITE		"punctualite"
+#define MAHKOEXPITOL	"mahkoexpitol"
+#define MORATHIAL		"morathial"
+
+#define ALIENORIGIN		"alienorigin"
+#define UNKNOWNALPHA	"unknownalpha"
+#define UNKNOWNDELTA	"unknowndelta"
+#define UNKNOWNOMEGA	"unknownomega"
 
 //Plant-specific reagents
 #define TANNIC_ACID		"tannic_acid"
@@ -527,6 +536,7 @@
 #define AMINOMICIAN		"aminomician"
 #define AMINOCYPRINIDOL	"aminocyprinidol"
 #define AMINOBLATELLA	"aminoblatella"
+#define AMINOCORYDON	"aminocorydon"
 #define TOMATO_SOUP		"tomato_soup"
 #define LUMINOL			"luminol"
 #define CAFFEINE		"caffeine"
@@ -546,6 +556,7 @@
 #define RADON			"radon"
 #define LEAD			"lead"
 #define THALLIUM		"thallium"
+#define THORIUM			"thorium"
 #define REGENERATECALCIUM	"regeneratecalcium"
 #define EQUALIZONE		"equalizone"
 
