@@ -22,7 +22,6 @@
 		"veteranclarke"
 	)
 	paintable = 1
-	cargo_capacity = 20
 	penetration_reduction = 1
 	damage_minimum = 0
 	weight_max = 500
