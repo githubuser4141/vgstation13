@@ -1,0 +1,80 @@
+<!--
+Title: Starscreen shield generator
+Used In File(s): /code/modules/power/ShieldGen/shield_gen.dm
+-->
+{{if data.locked}}
+	<div class="notice">Swipe card to unlock.</div>
+{{else}}
+	<div class="notice">Remember to lock with ID card after use.</div>
+	<div class="item">
+		<div class="itemLabelWide">Capacitor status:</div>
+		<div class="itemContents">
+			{{if data.capacitor}}
+				<span class="good">Connected</span>
+			{{else}}
+				<span class="bad">Not connected</span>
+			{{/if}}
+		</div>
+	</div>
+    <div class="item">
+        <div class="itemLabelWide">Generator status:</div>
+        <div class="itemContents">{{:helper.link(data.active ? 'On' : 'Off', 'power', {'toggle_active' : '1'})}}</div>
+    </div>
+    <div class="item">
+        <div class="itemLabelWide">Stability:</div>
+        <div class="itemContents">
+        {{if data.stability}}
+            <span class="good">Stable</span>
+        {{else}}
+            <span class="bad">Warning, field is unstable!</span>
+        {{/if}}
+        </div>
+    </div>
+    <div class="item">
+        <div class="itemLabelWide">Coverage radius:</div>
+        <div class="itemContents">
+            {{:helper.displayBar(data.field_radius, data.min_field_radius, data.max_field_radius, (data.field_radius >= data.max_field_radius/2) ? 'good' : (data.field_radius >= data.max_field_radius/4) ? 'average' : 'bad', data.field_radius + '/' + data.max_field_radius + ' meters')}}
+            <div style="clear: both; padding-top: 4px;">
+                {{:helper.link('MIN', null, {'adjust_field_radius' : -data.max_field_radius}, (data.field_radius > data.min_field_radius) ? null : 'disabled')}}
+				{{:helper.link('SET', null, {'set_field_radius' : 1})}}
+                {{:helper.link('MAX', null, {'adjust_field_radius' : data.max_field_radius}, (data.field_radius < data.max_field_radius) ? null : 'disabled')}}
+            </div>
+        </div>
+    </div>
+    <div class="item">
+        <div class="itemLabelWide">Overall field strength:</div>
+        <div class="itemContents">
+            {{:helper.displayBar(data.percentage_strength, 0, 100, (data.percentage_strength >= 50) ? 'good' : (data.percentage_strength >= 25) ? 'average' : 'bad', data.average_field_strength + ' Renwicks (' + data.percentage_strength + '%)')}}
+        </div>
+    </div>
+    <div class="item">
+        <div class="itemLabelWide">Charge rate:</div>
+        <div class="itemContents">
+                {{:helper.displayBar(data.strengthen_rate, data.min_strengthen_rate, data.max_strengthen_rate, (data.strengthen_rate >= data.max_strengthen_rate/2) ? 'good' : (data.strengthen_rate >= data.max_strengthen_rate/4) ? 'average' : 'bad', data.strengthen_rate + '/' + data.max_strengthen_rate + ' renwicks/sec')}}
+                <div style="clear: both; padding-top: 4px;">
+                    {{:helper.link('MIN', null, {'adjust_strengthen_rate' : -data.max_strengthen_rate}, (data.strengthen_rate > data.min_strengthen_rate) ? null : 'disabled')}}
+					{{:helper.link('SET', null, {'set_strengthen_rate' : 1})}}
+					{{:helper.link('MAX', null, {'adjust_strengthen_rate' : data.max_strengthen_rate}, (data.strengthen_rate < data.max_strengthen_rate) ? null : 'disabled')}}
+                </div>
+            </div>
+    </div>
+    <div class="item">
+        <div class="itemLabelWide">Upkeep energy:</div>
+        <div class="itemContents">{{:Math.round(data.upkeep_energy)}} Watts/sec</div>
+    </div>
+    <div class="item">
+        <div class="itemLabelWide">Additional energy required to charge:</div>
+        <div class="itemContents">{{:Math.round(data.additional_energy_required)}} Watts/sec</div>
+    </div>
+    <div class="item">
+        <div class="itemLabelWide">Maximum field strength:</div>
+        <div class="itemContents">
+                {{:helper.displayBar(data.field_strength_cap, data.min_field_strength_cap, data.max_field_strength_cap, (data.field_strength_cap >= data.max_field_strength_cap/2) ? 'good' : (data.field_strength_cap >= data.max_field_strength_cap/4) ? 'average' : 'bad', data.field_strength_cap + '/' + data.max_field_strength_cap + ' renwicks')}}
+                <div style="clear: both; padding-top: 4px;">
+                    {{:helper.link('MIN', null, {'adjust_field_strength_cap' : -data.max_field_strength_cap}, (data.field_strength_cap > data.min_field_strength_cap) ? null : 'disabled')}}
+					{{:helper.link('SET', null, {'set_field_strength_cap' : 1})}}
+					{{:helper.link('MAX', null, {'adjust_field_strength_cap' : data.max_field_strength_cap}, (data.field_strength_cap < data.max_field_strength_cap) ? null : 'disabled')}}
+                </div>
+            </div>
+    </div>
+{{/if}}

@@ -1,0 +1,662 @@
+//MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
+"a" = (
+/turf/unsimulated/wall/other,
+/area/prison/solitary)
+"b" = (
+/obj/machinery/power/apc{
+	dir = 8;
+	pixel_x = -24
+	},
+/obj/machinery/power/terminal{
+	dir = 8
+	},
+/obj/structure/cable{
+	d2 = 4;
+	icon_state = "0-4"
+	},
+/turf/simulated/floor,
+/area/prison/solitary)
+"c" = (
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor,
+/area/prison/solitary)
+"d" = (
+/obj/structure/cable{
+	d1 = 2;
+	d2 = 4;
+	icon_state = "2-4"
+	},
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor,
+/area/prison/solitary)
+"e" = (
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/obj/structure/cable{
+	d1 = 2;
+	d2 = 4;
+	icon_state = "2-4"
+	},
+/turf/simulated/floor,
+/area/prison/solitary)
+"f" = (
+/obj/machinery/power/terminal,
+/obj/structure/cable{
+	d2 = 8;
+	icon_state = "0-8"
+	},
+/obj/structure/cable{
+	d1 = 2;
+	d2 = 8;
+	icon_state = "2-8"
+	},
+/turf/simulated/floor,
+/area/prison/solitary)
+"g" = (
+/turf/simulated/floor,
+/area/prison/solitary)
+"h" = (
+/obj/structure/cable{
+	d1 = 1;
+	d2 = 2;
+	icon_state = "1-2"
+	},
+/turf/simulated/floor,
+/area/prison/solitary)
+"i" = (
+/obj/machinery/power/battery/smes/infinite,
+/obj/structure/cable,
+/turf/simulated/floor,
+/area/prison/solitary)
+"j" = (
+/obj/structure/fence/post,
+/obj/structure/cable{
+	d2 = 4;
+	icon_state = "0-4"
+	},
+/turf/simulated/floor/plating,
+/area/prison/solitary)
+"k" = (
+/obj/structure/fence,
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/obj/structure/cable{
+	d2 = 4;
+	icon_state = "0-4"
+	},
+/turf/simulated/floor/plating,
+/area/prison/solitary)
+"l" = (
+/obj/structure/fence,
+/obj/structure/cable{
+	d1 = 1;
+	d2 = 8;
+	icon_state = "1-8"
+	},
+/obj/structure/cable,
+/turf/simulated/floor/plating,
+/area/prison/solitary)
+"m" = (
+/obj/structure/fence/door/opened,
+/turf/simulated/floor/plating,
+/area/prison/solitary)
+"n" = (
+/obj/structure/fence/post,
+/obj/structure/cable{
+	d1 = 1;
+	d2 = 2;
+	icon_state = "1-2"
+	},
+/obj/structure/cable,
+/turf/simulated/floor/plating,
+/area/prison/solitary)
+"o" = (
+/obj/structure/fence,
+/obj/structure/cable,
+/obj/structure/cable{
+	d2 = 4;
+	icon_state = "0-4"
+	},
+/turf/simulated/floor/plating,
+/area/prison/solitary)
+"p" = (
+/obj/structure/fence/post,
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/obj/structure/cable{
+	d2 = 4;
+	icon_state = "0-4"
+	},
+/turf/simulated/floor/plating,
+/area/prison/solitary)
+"q" = (
+/obj/structure/fence/post,
+/turf/simulated/floor/plating,
+/area/prison/solitary)
+"r" = (
+/turf/simulated/floor/engine,
+/area/prison/solitary)
+"s" = (
+/obj/structure/fence/post,
+/obj/structure/cable{
+	d1 = 1;
+	d2 = 2;
+	icon_state = "1-2"
+	},
+/obj/structure/cable,
+/turf/simulated/floor/engine,
+/area/prison/solitary)
+"u" = (
+/obj/structure/fence,
+/obj/structure/cable,
+/turf/simulated/floor/engine,
+/area/prison/solitary)
+"x" = (
+/obj/structure/fence/post,
+/turf/simulated/floor{
+	icon_state = "cult"
+	},
+/area/prison/solitary)
+"z" = (
+/obj/structure/fence,
+/turf/simulated/floor{
+	icon_state = "cult"
+	},
+/area/prison/solitary)
+"A" = (
+/turf/simulated/floor{
+	icon_state = "cult"
+	},
+/area/prison/solitary)
+"B" = (
+/mob/living/simple_animal/hostile/humanoid/vox{
+	name = "Shlomo"
+	},
+/turf/simulated/floor{
+	icon_state = "cult"
+	},
+/area/prison/solitary)
+"F" = (
+/obj/structure/fence/door/secure/inverted,
+/turf/simulated/floor{
+	icon_state = "cult"
+	},
+/area/prison/solitary)
+"J" = (
+/obj/structure/fence,
+/turf/simulated/floor/plating,
+/area/prison/solitary)
+"K" = (
+/obj/structure/fence/cut/large,
+/turf/simulated/floor/plating,
+/area/prison/solitary)
+"L" = (
+/obj/structure/fence/cut/medium,
+/turf/simulated/floor/plating,
+/area/prison/solitary)
+"M" = (
+/obj/structure/fence/cut/small,
+/turf/simulated/floor/plating,
+/area/prison/solitary)
+"N" = (
+/obj/structure/fence/door/secure/inverted,
+/turf/simulated/floor/plating,
+/area/prison/solitary)
+
+(1,1,1) = {"
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+"}
+(2,1,1) = {"
+a
+b
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+a
+"}
+(3,1,1) = {"
+a
+c
+g
+g
+a
+q
+J
+J
+J
+J
+J
+J
+M
+L
+K
+J
+q
+a
+g
+a
+"}
+(4,1,1) = {"
+a
+c
+g
+g
+j
+r
+r
+r
+r
+r
+r
+r
+r
+r
+r
+r
+r
+q
+g
+a
+"}
+(5,1,1) = {"
+a
+c
+g
+g
+k
+r
+r
+r
+r
+r
+r
+r
+r
+r
+r
+r
+r
+J
+g
+a
+"}
+(6,1,1) = {"
+a
+c
+g
+g
+k
+r
+r
+z
+z
+z
+z
+z
+z
+z
+r
+r
+r
+K
+g
+a
+"}
+(7,1,1) = {"
+a
+c
+g
+g
+k
+r
+r
+z
+A
+A
+A
+A
+A
+z
+r
+r
+r
+L
+g
+a
+"}
+(8,1,1) = {"
+a
+d
+h
+h
+l
+r
+r
+z
+A
+A
+A
+A
+A
+z
+r
+r
+r
+M
+g
+a
+"}
+(9,1,1) = {"
+a
+c
+g
+g
+m
+r
+r
+z
+A
+A
+A
+A
+A
+z
+r
+r
+r
+J
+g
+a
+"}
+(10,1,1) = {"
+a
+e
+h
+h
+n
+s
+u
+x
+A
+A
+B
+A
+A
+F
+r
+r
+r
+N
+g
+a
+"}
+(11,1,1) = {"
+a
+c
+g
+g
+m
+r
+r
+z
+A
+A
+A
+A
+A
+z
+r
+r
+r
+J
+g
+a
+"}
+(12,1,1) = {"
+a
+d
+h
+h
+o
+r
+r
+z
+A
+A
+A
+A
+A
+z
+r
+r
+r
+J
+g
+a
+"}
+(13,1,1) = {"
+a
+c
+g
+g
+k
+r
+r
+z
+A
+A
+A
+A
+A
+z
+r
+r
+r
+J
+g
+a
+"}
+(14,1,1) = {"
+a
+c
+g
+g
+k
+r
+r
+z
+z
+z
+z
+z
+z
+z
+r
+r
+r
+J
+g
+a
+"}
+(15,1,1) = {"
+a
+f
+i
+g
+k
+r
+r
+r
+r
+r
+r
+r
+r
+r
+r
+r
+r
+J
+g
+a
+"}
+(16,1,1) = {"
+a
+g
+g
+g
+p
+r
+r
+r
+r
+r
+r
+r
+r
+r
+r
+r
+r
+q
+g
+a
+"}
+(17,1,1) = {"
+a
+g
+g
+g
+a
+q
+J
+J
+J
+J
+J
+J
+J
+J
+J
+J
+q
+a
+g
+a
+"}
+(18,1,1) = {"
+a
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+a
+"}
+(19,1,1) = {"
+a
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+g
+a
+"}
+(20,1,1) = {"
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+"}

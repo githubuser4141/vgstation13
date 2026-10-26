@@ -1,0 +1,551 @@
+#define HOG_MAX 450
+#define HOG_FED 300
+#define HOG_HUNGRY 250
+#define HOG_VHUNGRY 150
+
+#define HOG_CURIOUS 0
+#define HOG_SKITTISH 1
+#define HOG_HIT_AND_RUN 2
+#define HOG_ASSAULT 3
+
+/********************************************************
+*                                                       *
+*       At the top level, this is abstract.			    *
+*       Use piglets or grown hog types                  *
+*                                                       *
+*********************************************************/
+
+/mob/living/simple_animal/hostile/spacehog
+	name = "abstract space hog"
+	desc = "This one is missing behaviors."
+	icon = 'icons/mob/hog.dmi'
+	icon_state = "hog_clean"
+	icon_living = "hog_clean"
+	icon_dead = "hog_clean_dead"
+	speak_chance = 1
+	turns_per_move = 5
+	must_wander = TRUE
+	speak = list("Oink!","Squee!","Sqwaa!","Ounch!", "SQUEEEEE!","Oink...","Oink, oink", "Oink, oink, oink", "Oink!", "Oiiink.")
+	emote_hear = list("squeals hauntingly")
+	emote_see = list("roots about","squeals hauntingly")
+	emote_sound = list("sound/voice/pigsnort.ogg","sound/voice/pigsqueal.ogg")
+	response_help = "pats"
+	response_disarm = "shoves"
+	response_harm = "hits"
+	meat_type = /obj/item/weapon/reagent_containers/food/snacks/meat/box/pig
+	speed = 1
+	maxHealth = 80
+	health = 80
+	can_butcher = TRUE
+	size = SIZE_BIG
+
+	status_flags = CANSTUN
+
+	harm_intent_damage = 10
+	melee_damage_lower = 4
+	melee_damage_upper = 8
+	attacktext = "gores"
+	attack_sound = 'sound/weapons/bite.ogg'
+
+	min_oxy = 0
+	max_oxy = 0
+	min_tox = 0
+	max_tox = 0
+	min_co2 = 0
+	max_co2 = 0
+	min_n2 = 0
+	max_n2 = 0
+	minbodytemp = 0
+
+	faction = "HOG"
+
+	nutrition = HOG_FED
+	var/food_search_radius = 7
+	var/food_target = null //A secondary target only used when we are not aggroing for a target we attack
+	var/mood = HOG_SKITTISH
+	var/panic = 0 //Ticks down, when positive cause aggro
+
+/mob/living/simple_animal/hostile/spacehog/death(var/gibbed = FALSE)
+	..(gibbed)
+	playsound(src, 'sound/effects/box_scream.ogg', 100, 1)
+
+/mob/living/simple_animal/hostile/spacehog/Process_Spacemove(var/check_drift = 0)
+	return 1 //All spacehogs are proficient in space navigation
+
+/mob/living/simple_animal/hostile/spacehog/before_retreat() //Before we take a step away, if the most direct route is blocked and the enemy is near, panic
+	var/target_distance = get_dist(src,target)
+	if(target_distance <= 2)
+		var/turf/T = get_step(src, get_dir(target,src)) //calculate the next space
+		if(T.density)
+			panic += 2
+			return
+		for(var/atom/movable/AM in T)
+			if(AM.density)
+				panic += 2
+				return
+
+/mob/living/simple_animal/hostile/spacehog/proc/set_mood(var/mood)
+	switch(mood)
+		if(HOG_CURIOUS)
+			idle_vision_range = 4
+			retreat_distance = 4
+			minimum_distance = 4
+			turns_per_move = 1
+		if(HOG_SKITTISH)
+			idle_vision_range = 8
+			retreat_distance = 8
+			minimum_distance = 8
+			turns_per_move = 5
+		if(HOG_HIT_AND_RUN)
+			idle_vision_range = 8
+			retreat_distance = 2
+			minimum_distance = 1
+			turns_per_move = 5
+		if(HOG_ASSAULT)
+			idle_vision_range = 8
+			retreat_distance = null
+			minimum_distance = 1
+			turns_per_move = 5
+
+/mob/living/simple_animal/hostile/spacehog/Life()
+	..()
+	nutrition--
+
+	if(stance == HOSTILE_STANCE_IDLE && (!food_target || get_dist(food_target, src) > 7) && !ckey)
+		if(mood == HOG_CURIOUS)
+			var/odds_of_new_food_search = max(300 - nutrition, 0)
+			//every nutrition under HOG_FED increases odds of a new search by 1%
+			if(prob(odds_of_new_food_search))
+				mood = HOG_SKITTISH
+			return
+		food_target = idle_search()
+		if(!food_target)
+			set_mood(HOG_CURIOUS)
+
+/* Priorities:
+planted seeds with ligneous = FALSE
+fresh meat on ground or fish
+cabbage on ground
+other loose veggies on ground or eggs, fish eggs, borer eggs
+other snacks
+passive animals, preferring smaller ones
+carrion
+if ungreased adult: l containers
+*/
+//share info across all hogs?
+
+/mob/living/simple_animal/hostile/spacehog/proc/idle_search()
+	var/tree_tray = null
+	for(var/obj/machinery/portable_atmospherics/hydroponics/H in view(food_search_radius,src))
+		if(H.seed)
+			if(H.seed.ligneous)
+				tree_tray = H
+			else
+				return H
+	for(var/obj/item/weapon/reagent_containers/food/snacks/meat/M in view(food_search_radius,src))
+		return M
+	for(var/obj/item/weapon/reagent_containers/food/snacks/grown/cabbage/C in view(food_search_radius,src))
+		return C
+	for(var/obj/item/weapon/reagent_containers/food/snacks/grown/G in view(food_search_radius,src))
+		return G
+	var/lesser_snack = null
+	for(var/obj/item/weapon/reagent_containers/food/snacks/S in view(food_search_radius,src))
+		if(istype(S, /obj/item/weapon/reagent_containers/food/snacks/grown) || istype(S, /obj/item/weapon/reagent_containers/food/snacks/egg) || istype(S, /obj/item/weapon/reagent_containers/food/snacks/borer_egg))
+			return S //priority snacks
+		lesser_snack = S
+	if(lesser_snack)
+		return lesser_snack
+	for(var/obj/item/fish_eggs/F in view(food_search_radius,src))
+		return F
+	if(nutrition >= HOG_FED)
+		return null //Give up, nothing down here is worth eating unless we're reasonably hungry
+	var/carrion = null
+	for(var/mob/living/simple_animal/L in view(food_search_radius,src))
+		if(L.size > size)
+			continue //It's bigger than we are!
+		if(!L.meat_type)
+			continue //No meat? Not interested
+		if(L.stat)
+			carrion = L
+		else
+			GiveTarget(L)
+			return L
+	if(carrion)
+		return carrion
+	if(tree_tray)
+		return tree_tray
+	return wallow_search()
+
+/mob/living/simple_animal/hostile/spacehog/proc/wallow_search()
+
+
+/mob/living/simple_animal/hostile/spacehog/proc/eat(atom/movable/AM)
+	playsound(src, 'sound/items/eatfood.ogg', rand(10,50), 1)
+	if(istype(AM, /obj/item/weapon/reagent_containers/food/snacks/grown/cabbage))
+		var/mob/living/simple_animal/hostile/retaliate/box/pig/newpig = new(loc)
+		newpig.size = size
+		newpig.meat_amount = size
+		newpig.update_icon()
+		qdel(src)
+		return
+	if(isitem(AM))
+		if(AM.reagents)
+			AM.reagents.trans_to(src, 100)
+		else
+			reagents.add_reagent(NUTRIMENT, 4) //covers stuff like fish eggs
+		qdel(AM)
+	if(ismob(AM))
+		var/mob/living/simple_animal/SA = AM
+		if(SA.stat) //it's dead so let's eat butching products
+			var/obj/item/I = SA.drop_meat(src) //Try to drop some meat straight into our body
+			if(I) //Consume the reagents and destroy it
+				I.reagents.trans_to(src,100)
+				qdel(I)
+			else //It failed, let's eat the body itself.
+				SA.gib()
+				reagents.add_reagent(NUTRIMENT, 4)
+		else
+			UnarmedAttack(SA)
+	if(istype(AM,/obj/machinery/portable_atmospherics/hydroponics))
+		AM.shake(1,3)
+		var/obj/machinery/portable_atmospherics/hydroponics/H = AM
+		H.remove_plant()
+
+
+/********************************************************
+*                                                       *
+*       Behaviors specific to Adults only			    *
+*       				                                *
+*                                                       *
+*********************************************************/
+
+/mob/living/simple_animal/hostile/spacehog/adult/Life()
+	..()
+	panic--
+	if(stance == HOSTILE_STANCE_ATTACK) //If currently agitated by nearby humans, gain panic if piglets are nearby
+		for(var/mob/living/simple_animal/hostile/spacehog/piglet in view(7,src))
+			panic += 2
+	if(locked_to)
+		panic += 2 //Gain panic when locked, such as in a beartrap or cage
+		food_search_radius = 1 //don't bother looking farther if we can't reach it
+	else
+		food_search_radius = 7
+	if(panic) //or failed retreat
+		set_mood(HOG_ASSAULT)
+	else  //If no panic, set mood based on hunger
+		handle_hunger()
+
+/mob/living/simple_animal/hostile/spacehog/adult/proc/handle_hunger()
+	switch(nutrition)
+		if(HOG_FED to INFINITY)
+			set_mood(HOG_SKITTISH)
+		if(HOG_HUNGRY to HOG_FED-1)
+			set_mood(HOG_HIT_AND_RUN)
+		if(0 to HOG_HUNGRY-1)
+			set_mood(HOG_ASSAULT)
+
+/mob/living/simple_animal/hostile/spacehog/adult/UnarmedAttack(atom/target, prox)
+	if(!target || !prox)
+		return
+
+	if(!client && isliving(target)) //automated headbutting if no client
+		for(var/spell/headbutt/M in spell_list)
+			if(M.charge_counter == M.charge_cooldown_max)
+				M.cast(list(target),src)
+				M.charge_counter = 0
+				M.process()
+				return
+	else
+		if(istype(target,/obj/item/weapon/reagent_containers/food))
+			eat(target)
+	..() //if no headbutt available, just normal attack
+
+/mob/living/simple_animal/hostile/spacehog/beartrap_act(var/obj/item/weapon/beartrap/trap)
+	trap.trapped = 1
+	trap.trappedbear = src
+	LostTarget()
+	dir = SOUTH
+	trap.armed = 0
+	playsound(trap, 'sound/effects/snap.ogg', 60, 1)
+	trap.lock_atom(src, /datum/locking_category/beartrap)
+	adjustBruteLoss(20)
+	update_canmove()
+	update_icon()
+	return TRUE
+
+/spell/headbutt
+	name = "Headbutt"
+	desc = "Knocks the target down."
+	charge_cooldown_max = 10 SECONDS
+	spell_flags = WAIT_FOR_CLICK
+	range = 1
+	hud_state = "wiz_fist"
+	spell_flags = IS_HARMFUL
+
+/spell/headbutt/cast(var/list/targets, var/mob/user)
+	..()
+	for(var/mob/living/target in targets)
+		if (user.is_pacified(1,target))
+			return
+		playsound(user, "trayhit", 75, 1)
+		target.Knockdown(5)
+		user.visible_message("<span class='danger'>\The [user] headbutts \the [target]!</span>")
+
+
+/********************************************************
+*                                                       *
+*       Subtypes - Adult: Mama, Greased, Overgreased    *
+*        Not adult: Piglet                              *
+*                                                       *
+*********************************************************/
+
+/mob/living/simple_animal/hostile/spacehog/adult
+	name = "feral space hog"
+	desc = "This one isn't greased up."
+
+/mob/living/simple_animal/hostile/spacehog/adult/New()
+	..()
+	add_spell(new /spell/headbutt, "wiz_fist")
+
+/mob/living/simple_animal/hostile/spacehog/adult/mama
+	name = "mama hog"
+	desc = "The ultimate hog. It's huge!"
+	icon_state = "sow"
+	icon_living = "sow"
+	icon_dead = "sow_dead"
+	speed = 2.5
+	maxHealth = 450
+	health = 450
+	size = SIZE_HUGE
+	nutrition = HOG_MAX
+
+/mob/living/simple_animal/hostile/spacehog/adult/mama/Life()
+	..()
+	if((nutrition > HOG_HUNGRY) && prob(10))
+		nutrition -= 15
+		new /mob/living/simple_animal/hostile/spacehog/piglet(loc)
+
+/mob/living/simple_animal/hostile/spacehog/adult/greased
+	name = "greased up feral space hog"
+	desc = "Oh no, it's greased."
+	speed = 0.8 //faster due to grease
+	pass_flags = PASSMOB|PASSDOOR //greased hogs can move through doors
+	melee_damage_lower = 8
+	melee_damage_upper = 12
+	icon_state = "hog_greased"
+	icon_living = "hog_greased"
+	icon_dead = "hog_greased_dead"
+
+/mob/living/simple_animal/hostile/spacehog/adult/greased/Move(NewLoc, Dir = 0, step_x = 0, step_y = 0, glide_size_override = 0)
+	..()
+	for(var/obj/machinery/door/D in loc)
+		if(D?.density)
+			SetStunned(1)
+			visible_message("<span class='danger'>\The [src] squeezes through with its slippery grease!</span>")
+
+/mob/living/simple_animal/hostile/spacehog/adult/greased/drop_meat(location)
+	var/obj/item/I = ..()
+	I.throw_at(pick(orange(7,src)), 7, 2)
+
+/mob/living/simple_animal/hostile/spacehog/adult/greased/over
+	name = "overgreased feral space hog"
+	desc = "It leaves a sickly trail of grease, like a particularly slimy slug."
+	speed = 0.7
+	melee_damage_lower = 12
+	melee_damage_upper = 15
+	icon_state = "hog_overgreased"
+	icon_living = "hog_overgreased"
+	icon_dead = "hog_overgreased_dead"
+
+/mob/living/simple_animal/hostile/spacehog/adult/greased/over/Move(NewLoc, Dir = 0, step_x = 0, step_y = 0, glide_size_override = 0)
+	//Before departing
+	var/turf/simulated/T = loc
+	if(istype(T) && !T.is_wet())
+		new /obj/effect/overlay/puddle(T, TURF_WET_LUBE, 5 SECONDS) //leave 5 seconds of lube behind
+	..() //move on
+
+/mob/living/simple_animal/hostile/spacehog/piglet
+	name = "feral space piglet"
+	desc = "This one isn't old enough for grease."
+	icon_state = "hoglet"
+	icon_living = "hoglet"
+	icon_dead = "hoglet_dead"
+	maxHealth = 40
+	health = 40
+	size = SIZE_SMALL
+	retreat_distance = 8 //Retreats and does not approach when it sees a hostile
+	minimum_distance = 8
+
+/mob/living/simple_animal/hostile/spacehog/piglet/set_mood(var/mood)
+	..(HOG_SKITTISH)
+
+
+//This is not a subtype of spacehog because it is very different than other spacehogs. It does not fight, it has no moods, foraging, hunger needs, etc.
+/mob/living/simple_animal/rampagingspacehog
+	name = "rampaging overgreased feral space hog"
+	desc = "It leaves a sickly trail of grease and knocks over anyone in its way."
+	speed = 1 //moves at same speed as a person when not dashing
+	maxHealth = 300
+	health = 300
+	icon = 'icons/mob/hog.dmi'
+	icon_state = "hog_overgreased"
+	icon_living = "hog_overgreased"
+	icon_dead = "hog_overgreased_dead"
+	speak = list("Oink!","Squee!","Sqwaa!","Ounch!", "SQUEEEEE!","Oink...","Oink, oink", "Oink, oink, oink", "Oink!", "Oiiink.")
+	emote_hear = list("squeals hauntingly")
+	emote_see = list("roots about","squeals hauntingly")
+	emote_sound = list("sound/voice/pigsnort.ogg","sound/voice/pigsqueal.ogg")
+	response_help = "pats"
+	response_disarm = "shoves"
+	response_harm = "hits"
+	meat_type = /obj/item/weapon/reagent_containers/food/snacks/meat/box/pig
+	meat_amount = 24
+	can_butcher = TRUE
+	size = SIZE_BIG
+	var/dashspeed = 3 //How fast it paths!
+	var/nextsqueal = 0
+	var/squeal_delay = 2 SECONDS
+	var/list/homes = list() //Places the rampaging hog will try to go
+	var/obj/item/weapon/card/id/captains_spare/CS
+	var/target //Where we're heading
+	var/list/path = list()
+	var/hurt_sound = 'sound/voice/pigsqueal.ogg'
+	var/snort_sound = 'sound/voice/pigsnort.ogg'
+
+/mob/living/simple_animal/rampagingspacehog/New()
+	..()
+	homes += loc
+	CS = new(src) //The hog can already squeeze through any door, but this makes sure he knows it.
+
+/mob/living/simple_animal/rampagingspacehog/Destroy()
+	QDEL_NULL(CS)
+	..()
+
+/mob/living/simple_animal/rampagingspacehog/Move(NewLoc, Dir = 0, step_x = 0, step_y = 0, glide_size_override = 0)
+	//Before departing
+	var/turf/simulated/T = loc
+	if(istype(T) && !T.is_wet())
+		new /obj/effect/overlay/puddle(T, TURF_WET_LUBE, 5 SECONDS) //leave 5 seconds of lube behind
+	..() //move on
+
+/mob/living/simple_animal/rampagingspacehog/to_bump(var/atom/movable/AM)
+	if(ishuman(AM))
+		var/mob/living/carbon/human/H = AM
+		H.Knockdown(5)
+	..()
+
+/mob/living/simple_animal/rampagingspacehog/adjustBruteLoss(var/damage)
+	..()
+	if(health<=0)
+		return
+	if(homes.len<2)
+		homes += get_open_maintenance_turfs(4)
+	if(nextsqueal < world.time)
+		nextsqueal = world.time + squeal_delay
+		playsound(loc, hurt_sound, 50, 0)
+	target = pick(homes)
+	// hogs move with Move() so they can take diagonal steps - use the fast diagonal search, not the
+	// slower cardinal one, and get shorter routes to boot
+	path = get_path_to(src, target, max_distance=500, id = CS, diagonally = TRUE)
+	pathers += src
+
+/mob/living/simple_animal/rampagingspacehog/Life()
+	..()
+
+	for(var/i = 1 to dashspeed)
+		if(path.len>0)
+			process_path_step()
+		else
+			break
+
+/mob/living/simple_animal/rampagingspacehog/process_path_step()
+	if(gcDestroyed || stat == DEAD)
+		return FALSE
+	if(!path || !path.len)
+		playsound(loc, snort_sound, 50, 0)
+		return FALSE
+	Move(path[1], get_dir(src, path[1])) // pass dir so Move() splits diagonals and won't cut wall corners
+	path.Remove(path[1])
+	if(!path.len)
+		playsound(loc, snort_sound, 50, 0)
+		return FALSE
+	return TRUE
+
+//This is a new forme of your living nightmares
+/mob/living/simple_animal/rampagingspacehog/sleeperclown
+	name = "overly protective sleeper clownspider"
+	desc = "There are too many legs to count. You can vaguely make out a sleeper inside of the twisted horror."
+	icon = 'icons/mob/clown_mobs.dmi'
+	icon_state = "sleeperclown"
+	icon_living = "sleeperclown"
+	icon_dead = "sleeperclown_dead"
+	speak = list("Honk!","Squee!","Sqwaa!","Hounk!", "SQUEEEEE!","Honk...","Honk, honk", "Honk, honk, honk", "Honk!", "Hooonk.")
+	emote_hear = list("honks hauntingly")
+	emote_see = list("scours about","honks its horn hauntingly")
+	emote_sound = list("sound/items/bikehorn.ogg")
+	response_help = "pats"
+	response_disarm = "shoves"
+	response_harm = "hits"
+	meat_type = /obj/item/weapon/reagent_containers/food/snacks/meat/human
+	meat_amount = 12
+	can_butcher = TRUE
+	size = SIZE_BIG
+	mob_property_flags = MOB_NO_PETRIFY | MOB_NO_LAZ
+	attack_sound = 'sound/items/bikehorn.ogg'
+	hurt_sound = 'sound/items/bikehorn_curaracha.ogg'
+	snort_sound = 'sound/items/bikehorn.ogg'
+	squeal_delay = 4 SECONDS
+	pixel_x = -6
+
+/mob/living/simple_animal/rampagingspacehog/sleeperclown/Life()
+	..()
+	for(var/mob/living/person in contents)
+		//weird nullspace can't breet problem, this fixes it
+		person.nobreath = 15
+		//rainbow colored glass
+		person.druggy = max(person.druggy, 3)
+		//it captures and then protects you
+		if(person.getOxyLoss())
+			person.adjustOxyLoss(-2)
+		if(person.getBruteLoss())
+			person.heal_organ_damage(2, 0)
+		if(person.getFireLoss())
+			person.heal_organ_damage(0, 2)
+		if(person.getToxLoss())
+			person.adjustToxLoss(-2)
+	if(stat != DEAD && prob(3)) //life proc 2 seconds, this will give approximately one spiderling a minute
+		new /mob/living/simple_animal/hostile/giant_spider/spiderling/clownling(loc)
+
+/mob/living/simple_animal/rampagingspacehog/sleeperclown/Move(NewLoc, Dir = 0, step_x = 0, step_y = 0, glide_size_override = 0)
+	playsound(src, "clownstep", 50, 1)
+	..()
+
+/mob/living/simple_animal/rampagingspacehog/sleeperclown/emp_act(severity)
+	if(flags & INVULNERABLE)
+		return
+	//EMP Vulnerability!
+	switch (severity)
+		if (1)
+			adjustBruteLoss(50)
+		if (2)
+			adjustBruteLoss(25)
+
+/mob/living/simple_animal/rampagingspacehog/sleeperclown/death(gibbed)
+	playsound(src, 'sound/machines/pressurehiss.ogg', 70, 1)
+	for(var/mob/person in contents)
+		person.forceMove(get_turf(src))
+		visible_message("\The [name] releases \the [person] as it dies!")
+	playsound(src, 'sound/misc/sadtrombone.ogg', 70, 1)
+	..()
+
+/mob/living/simple_animal/rampagingspacehog/sleeperclown/gib(animation = FALSE, meat = TRUE)
+	new /obj/item/clothing/mask/gas/clown_hat(loc)
+	..()
+
+/mob/living/simple_animal/rampagingspacehog/sleeperclown/Destroy()
+	for(var/mob/person in contents)
+		person.forceMove(get_turf(src))
+	..()
+
+/mob/living/simple_animal/rampagingspacehog/sleeperclown/get_butchering_products()
+	return list(/datum/butchering_product/spider_legs/sleeperclown, /datum/butchering_product/hivelord_core/sleeperclown)

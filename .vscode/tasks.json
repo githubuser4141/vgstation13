@@ -1,0 +1,128 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "process",
+			"command": "tools/build/build",
+			"windows": {
+				"command": ".\\tools\\build\\build.bat"
+			},
+			"options": {
+				"env": {
+					"DM_EXE": "${config:dreammaker.byondPath}"
+				}
+			},
+			"problemMatcher": [
+				"$dreammaker",
+				"$tsc",
+				"$eslint-stylish"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"dependsOn": "dm: reparse",
+			"label": "Build All"
+		},
+		{
+			"type": "dreammaker",
+			"dme": "vgstation13.dme",
+			"problemMatcher": [
+				"$dreammaker"
+			],
+			"group": "build",
+			"label": "dm: build - vgstation13.dme"
+		},
+		{
+			"command": "${command:dreammaker.reparse}",
+			"group": "build",
+			"label": "dm: reparse"
+		},
+		{
+			"type": "shell",
+			"command": "bin/tgui-build",
+			"windows": {
+				"command": ".\\bin\\tgui-build.cmd"
+			},
+			"problemMatcher": [
+				"$tsc",
+				"$eslint-stylish"
+			],
+			"group": "build",
+			"label": "tgui: build"
+		},
+		{
+			"type": "shell",
+			"command": "bin/tgui-dev",
+			"windows": {
+				"command": ".\\bin\\tgui-dev.cmd"
+			},
+			"problemMatcher": [
+				"$tsc",
+				"$eslint-stylish"
+			],
+			"group": "build",
+			"label": "tgui: dev server"
+		},
+		{
+			"type": "shell",
+			"command": "bin/tgui-bench",
+			"windows": {
+				"command": ".\\bin\\tgui-bench.cmd"
+			},
+			"problemMatcher": [
+				"$tsc",
+				"$eslint-stylish"
+			],
+			"group": "build",
+			"label": "tgui: bench"
+		},
+		{
+			"type": "shell",
+			"command": "bin/tgui-sonar",
+			"windows": {
+				"command": ".\\bin\\tgui-sonar.cmd"
+			},
+			"problemMatcher": [
+				"$tsc",
+				"$eslint-stylish"
+			],
+			"group": "build",
+			"label": "tgui: sonar"
+		},
+		{
+			"type": "shell",
+			"command": "tools/build/build",
+			"args": ["tgui-clean"],
+			"windows": {
+				"command": ".\\tools\\build\\build.bat",
+				"args": ["tgui-clean"]
+			},
+			"group": "build",
+			"label": "tgui: clean",
+		},
+		{
+		    "type": "shell",
+		    "label": "Background: Wait for DreamDaemon",
+		    "command": "start",
+		    "args": ["\"Waiting for DreamDaemon\"", "powershell", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\bin\\connect-to-local-wait.ps1"],
+		    "options": {
+		        "shell": {
+		            "executable": "cmd.exe", // it needs to detach so vscode can actually launch dreamdaemon before we start waiting for it
+		            "args": ["/c"]
+		        }
+		    },
+		    "presentation": {
+		        "reveal": "silent"
+		    },
+		    "problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "Build and Launch Server",
+			"dependsOn": ["Build All", "Background: Wait for DreamDaemon"],
+			"dependsOrder": "parallel",
+			"problemMatcher": []
+		}
+	]
+}

@@ -1,0 +1,50 @@
+<!--
+Title: Starscreen shield capacitor
+Used In File(s): /code/modules/power/ShieldGen/shield_capacitor.dm
+-->
+{{if data.locked}}
+	<div class="notice">Swipe card to unlock.</div>
+{{else}}
+	<div class="notice">Remember to lock with ID card after use.</div>
+    <div class="item">
+        <div class="itemLabelWide">Status:</div>
+        <div class="itemContents">{{:helper.link(data.active ? 'On' : 'Off', 'power', {'toggle_active' : '1'})}}</div>
+    </div>
+    <div class="item">
+        <div class="itemLabelWide">Cable power:</div>
+        <div class="itemContents">
+        {{if data.cable}}
+            <span class="good">Found.</span>
+        {{else}}
+            <span class="bad">Not found.</span>
+        {{/if}}
+        </div>
+    </div>
+    <div class="item">
+        <div class="itemLabelWide">Stability:</div>
+        <div class="itemContents">
+        {{if data.stability}}
+            <span class="good">Stable</span>
+        {{else}}
+            <span class="bad">Warning, low charge!</span>
+        {{/if}}
+        </div>
+    </div>
+    <div class="item">
+        <div class="itemLabelWide">Charge:</div>
+        <div class="itemContents">
+            {{:helper.displayBar(data.charge, data.min_charge, data.max_charge, (data.charge >= data.max_charge/2) ? 'good' : (data.charge >= data.max_charge/4) ? 'average' : 'bad', data.charge + '/' + data.max_charge + ' kilojoules (' + data.charge_percentage + '%)')}}
+        </div>
+    </div>
+    <div class="item">
+        <div class="itemLabelWide">Charge rate:</div>
+        <div class="itemContents">
+                {{:helper.displayBar(data.charge_rate, data.min_charge_rate, data.max_charge_rate, (data.charge_rate >= data.max_charge_rate/2) ? 'good' : (data.charge_rate >= data.max_charge_rate/4) ? 'average' : 'bad', data.charge_rate + '/' + data.max_charge_rate + ' kilowatts')}}
+                <div style="clear: both; padding-top: 4px;">
+                    {{:helper.link('MIN', null, {'adjust_charge_rate' : -data.max_charge_rate}, (data.charge_rate > data.min_charge_rate) ? null : 'disabled')}}
+                    {{:helper.link('SET', null, {'set_charge_rate' : 1})}}
+                    {{:helper.link('MAX', null, {'adjust_charge_rate' : data.max_charge_rate}, (data.charge_rate < data.max_charge_rate) ? null : 'disabled')}}
+                </div>
+            </div>
+    </div>
+{{/if}}

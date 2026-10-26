@@ -1,0 +1,991 @@
+/////////////////////////////////////////
+// THE SLEEPER ITSELF
+/////////////////////////////////////////
+
+/obj/machinery/sleeper
+	name = "sleeper"
+	icon = 'icons/obj/cryogenics3.dmi'
+	icon_state = "sleeper_0"
+	density = TRUE
+	anchored = TRUE
+	var/sleeptime = 6 SECONDS
+	var/base_icon = "sleeper"
+	var/mob/living/occupant = null
+	var/available_options = list(INAPROVALINE = "Inaprovaline", STOXIN2 = "Soporific Rejuvenant", DERMALINE = "Dermaline", BICARIDINE = "Bicaridine", DEXALIN = "Dexalin")
+	var/crit_injectables = list(INAPROVALINE)
+	var/amounts = list(5, 10, 20)
+	var/sedativeblock = FALSE //To prevent people from being surprisesoporific'd
+	machine_flags = SCREWTOGGLE | CROWDESTROY | WRENCHMOVE | EJECTNOTDEL | EMAGGABLE
+	component_parts = newlist(
+		/obj/item/weapon/circuitboard/sleeper,
+		/obj/item/weapon/stock_parts/scanning_module,
+		/obj/item/weapon/stock_parts/manipulator,
+		/obj/item/weapon/stock_parts/manipulator
+	)
+	light_color = LIGHT_COLOR_CYAN
+	light_range_on = 3
+	light_power_on = 2
+	var/deff_icon = TRUE
+	var/on = FALSE
+	var/target_time = 0
+	var/setting
+	var/automatic = FALSE
+	var/auto_eject_after = 1 //Boot the mooch off after waking 'em up
+	var/drag_delay = 20
+	var/cools = 0
+	var/works_in_crit = FALSE //Will it let you inject chemicals into people in critical condition
+
+	//Plugin System-related Variables
+	var/accepts_plugins = TRUE
+	var/list/plugins = list()
+	var/advertising = FALSE
+	var/ad_cooldown = FALSE
+	var/ad_list = list()
+	var/hiss_noise = 'sound/machines/pressurehiss.ogg'
+	var/funny = FALSE //clown time?
+	var/info_hidden = FALSE //hides information about chems when set to true
+
+	hack_abilities = list(
+		/datum/malfhack_ability/toggle/disable,
+		/datum/malfhack_ability/oneuse/overload_quiet,
+		/datum/malfhack_ability/oneuse/emag
+	)
+	var/awaken = FALSE //turn to true to do cursed and terrible things
+
+/obj/machinery/sleeper/splashable()
+	return FALSE
+
+/obj/machinery/sleeper/spillContents(destroy_chance = 0)
+	for(var/obj/plug in plugins)
+		plug.forceMove(src.loc)
+	..()
+
+/obj/machinery/sleeper/power_change()
+	..()
+	if(!(stat & (BROKEN|NOPOWER|FORCEDISABLE)) && occupant)
+		set_light(light_range_on, light_power_on)
+	else
+		set_light(0)
+	update_icon()
+
+/obj/machinery/sleeper/New()
+	..()
+	if(deff_icon && map.nameShort == "deff")
+		icon = 'maps/defficiency/medbay.dmi'
+	RefreshParts()
+
+/obj/machinery/sleeper/Destroy()
+	go_out() //Eject everything
+	..()
+
+/obj/machinery/sleeper/update_icon()
+	overlays = list()
+	icon_state = "[base_icon]_[occupant ? "1" : "0"]"
+	for(var/obj/item/device/plugin/sleeper/plug in plugins)
+		plug.provide_overlay(src)
+	for(var/obj/item/device/plugin/sleeper/plug in plugins)
+		plug.provide_extra_overlay(src)
+	if(panel_open)
+		overlays += "sleeper-panel"
+	else
+		overlays -= "sleeper-panel"
+
+/obj/machinery/sleeper/RefreshParts()
+	var/T = 0
+	available_options = list()
+	crit_injectables = list()
+	funny = FALSE
+	advertising = FALSE
+	ad_list = list()
+	hiss_noise = 'sound/machines/pressurehiss.ogg'
+
+	for(var/obj/item/weapon/stock_parts/SP in component_parts)
+		T += SP.rating
+
+	//Override the CRIT injection rule with high tier parts/emag
+	if(T >= 12 || (emagged))
+		works_in_crit = TRUE
+	else
+		works_in_crit = FALSE
+
+	update_icon()
+
+	//Better upgrades means faster wake-up-patient speeds
+	switch(T)
+		if(0 to 5)
+			sleeptime = 6 SECONDS
+		if(6 to 8)
+			sleeptime = 4 SECONDS
+		if(9 to 11)
+			sleeptime = 2 SECONDS
+		if(12 to INFINITY)
+			sleeptime = 0.1 SECONDS
+
+	//Handles custom rules from the plugin system
+	var/overriding_chems = FALSE
+	for(var/obj/item/device/plugin/sleeper/plug in plugins)
+		//Custom exit hissing noises
+		//Multiple plugins: Only the latest installed is applied
+		if(plug.custom_hiss)
+			hiss_noise = plug.custom_hiss
+		//Replacing the standard chemical list with its own
+		//Multiple plugins: stack... for now
+		if(plug.override_all_chems)
+			overriding_chems = TRUE
+		//Plugins can provide advertisements on injection
+		//Multiple plugins: Stack, the messages are randomly picked from the entire list
+		if(plug.advertisements.len)
+			advertising = TRUE
+			ad_list += plug.advertisements
+		//Plugins can manually enable injecting in crit
+		if(plug.override_all_crit)
+			works_in_crit = TRUE
+		if(plug.funny)
+			funny = TRUE
+		if(plug.hides_info)
+			info_hidden = TRUE
+
+	//Builds list of chemicals injectable on crit
+	crit_injectables = list(INAPROVALINE)
+	for(var/obj/item/device/plugin/sleeper/plug in plugins)
+		if(plug.override_crit_chems.len)
+			crit_injectables += plug.override_crit_chems
+
+	if(overriding_chems)
+		for(var/obj/item/device/plugin/sleeper/plug in plugins)
+			if(plug.override_all_chems)
+				available_options |= plug.t1chems
+				if(T >= 6)
+					available_options |= plug.t2chems
+				if(T >= 9)
+					available_options |= plug.t3chems
+				if(T >= 12)
+					available_options |= plug.t4chems
+				if(emagged)
+					available_options |= plug.emagchems
+		return
+
+
+	//Build a standard chem list
+	//Tier 1, all sleepers have this
+	available_options += list(INAPROVALINE = "Inaprovaline", STOXIN2 = "Soporific Rejuvenant", KELOTANE = "Kelotane", BICARIDINE = "Bicaridine", DEXALIN = "Dexalin")
+	for(var/obj/item/device/plugin/sleeper/plug in plugins)
+		if(plug.t1chems.len)
+			available_options |= plug.t1chems
+	if(T >= 6) // Tier 2
+		available_options += list(IMIDAZOLINE = "Imidazoline", INACUSIATE = "Inacusiate", TRICORDRAZINE = "Tricordrazine")
+		for(var/obj/item/device/plugin/sleeper/plug in plugins)
+			if(plug.t2chems.len)
+				available_options |= plug.t2chems
+	if(T >= 9) // Tier 3
+		available_options += list(ALKYSINE = "Alkysine", TRAMADOL = "Tramadol", PEPTOBISMOL  = "Peptobismol")
+		for(var/obj/item/device/plugin/sleeper/plug in plugins)
+			if(plug.t3chems.len)
+				available_options |= plug.t3chems
+	if(T >= 12) // Tier 4
+		available_options += list(DOCTORSDELIGHT = "Doctor's Delight", REZADONE = "Rezadone", PERIDAXON = "Peridaxon")
+		for(var/obj/item/device/plugin/sleeper/plug in plugins)
+			if(plug.t4chems.len)
+				available_options |= plug.t4chems
+	if(emagged)
+		for(var/obj/item/device/plugin/sleeper/plug in plugins)
+			if(plug.emagchems.len)
+				available_options |= plug.emagchems
+
+	for(var/obj/item/device/plugin/sleeper/plug in plugins)
+		if(plug.remove_chems.len)
+			available_options -= plug.remove_chems
+
+/obj/machinery/sleeper/emag_act(mob/user)
+	if(!emagged)
+		to_chat(user, "<span class='warning'>You short out the overdose prevention system on \the [src].</span>")
+		emagged = 1
+		RefreshParts()
+		return 1
+	return
+
+/obj/machinery/sleeper/interact(var/mob/user)
+	var/dat = list()
+	if(funny)
+		dat += "<font face=\"Comic Sans MS\">"
+	if(on)
+		dat += "<B>Performing anaesthesic emergence...</B><BR>" //Best I could come up with
+		dat += "<B>Purging sleep-inducing chemicals...</B>" //Same
+		dat += "<HR><A href='?src=\ref[src];toggle_autoeject=1'>Auto-eject occupant: [auto_eject_after ? "Yes" : "No"]</A><BR>"
+	else
+		dat += "<b>Occupant statistics:</b><BR>"
+		if(occupant)
+			var/occupant_status = "???"
+			switch(occupant.stat)
+				if(CONSCIOUS)
+					occupant_status = "conscious"
+				if(UNCONSCIOUS)
+					occupant_status = "<span class='average'>unconscious</span>"
+				if(DEAD)
+					occupant_status = "<span class='average'>*dead*</span>"
+			dat += "\tHealth: <span class='[occupant.health > 50 ? "" : "average"]'>[round(occupant.health, 0.1)]</span> ([occupant_status])<br>"
+			if(iscarbon(occupant))
+				var/mob/living/carbon/C = occupant
+				dat += "<span class='[C.pulse == PULSE_NONE || C.pulse >= PULSE_2FAST ? "average" : ""]'>\t-Pulse, bpm: [C.get_pulse(GETPULSE_TOOL)]</span><br>"
+			var/bruteloss = occupant.getBruteLoss()
+			dat += "<span class='[bruteloss < 60 ? "" : "average"]'>\t-Brute damage: [round(bruteloss, 0.1)]</span><br>"
+			var/oxyloss = occupant.getOxyLoss()
+			dat += "<span class='[oxyloss < 60 ? "" : "average"]'>\t-Respiratory damage: [round(oxyloss, 0.1)]</span><br>"
+			var/toxloss = occupant.getToxLoss()
+			dat += "<span class='[toxloss < 60 ? "" : "average"]'>\t-Toxin content: [round(toxloss, 0.1)]</span><br>"
+			var/fireloss = occupant.getFireLoss()
+			dat += "<span class='[fireloss < 60 ? "" : "average"]'>\t-Burn severity: [round(fireloss, 0.1)]</span><br>"
+
+			var/paralysissum = max(occupant.paralysis, occupant.sleeping)
+			dat += "<hr>Paralysis summary: [paralysissum] ([round(paralysissum * 2)] seconds left!)<br>"
+			dat += "<a href='?src=\ref[src];eject=1'>Eject</a><a href='?src=\ref[src];wakeup=1'>Begin wake-up cycle</a><br>"
+			if(occupant.reagents)
+				for(var/chemical in available_options)
+					if (emagged && (occupant.reagents.get_reagent_amount(chemical) > 20))
+						dat += "<span style='float: left'>[available_options[chemical]]: 20 units</span><span style='float: right'>"
+					else
+						dat += "<span style='float: left'>[available_options[chemical]]: [round(occupant.reagents.get_reagent_amount(chemical), 0.1)] units</span><span style='float: right'>"
+					var/injecttext = "Inject "
+					for(var/amount in amounts)
+						dat += " <a href='?src=\ref[src];chemical=[chemical];amount=[amount]'"
+						if(occupant.stat == DEAD || ((!works_in_crit && occupant.health < 0) && !(chemical in crit_injectables)))
+							dat += "class='darkred'"
+						dat += ">[injecttext][amount]u</a>"
+						injecttext = null
+					dat += "<a href='?src=\ref[src];info=[chemical]'>&#9432;</a>"
+					dat += "</span><br>"
+
+			dat += "<HR><A href='?src=\ref[src];refresh=1'>Refresh</A><BR>"
+
+		else
+			dat += "The sleeper is empty.<br><hr>"
+			for(var/chemical in available_options)
+				dat += "<span style='float: left'>[available_options[chemical]]: </span><span style='float: right'><a href='?src=\ref[src];info=[chemical]'>&#9432;</a></span><br>"
+	if(funny)
+		dat += "</font>"
+	dat = jointext(dat,"")
+	var/datum/browser/popup = new(user, "\ref[src]", name, 400, 500)
+	if(funny)
+		popup.remove_stylesheets()
+		popup.add_stylesheet("clown", 'html/browser/clown.css')
+	popup.set_content(dat)
+	popup.open()
+
+/obj/machinery/sleeper/Topic(href, href_list)
+	if(..())
+		return TRUE
+	if(usr.loc == src)
+		return TRUE
+	else
+		usr.set_machine(src)
+		if(href_list["chemical"])
+			if(occupant)
+				if(!(href_list["chemical"] in available_options)) //href exploitu go home
+					to_chat(usr,"<span class='warning'>That's odd. You could've sworn the [href_list["chemical"]] button was there just a second ago!")
+					add_fingerprint(usr)
+					return
+				if(occupant.stat == DEAD)
+					to_chat(usr, "<span class='danger'>This person has no life for to preserve anymore. Take them to a department capable of reanimating them.</span>")
+				else if((href_list["chemical"] == STOXIN2 || href_list["chemical"] == CHILLWAX) && sedativeblock)
+					if(sedativeblock < 3)
+						to_chat(usr, "<span class='warning'>Sedative injections not yet ready. Please try again in a few seconds.</span>")
+					else //if this guy is seriously just mashing the soporific button...
+						to_chat(usr, "[pick( \
+						"<span class='warning'>This guy just got jammed into the machine, give them a breath before trying to pump them full of drugs.</span>", \
+						"<span class='warning'>Give it a rest.</span>", \
+						"<span class='warning'>Aren't you going to tuck them in before putting them to sleep?</span>", \
+						"<span class='warning'>Slow down just a second, they aren't going anywhere... right?</span>", \
+						"<span class='warning'>Just got to make sure you're not tripping the fuck out of an innocent bystander, stay tight.</span>", \
+						"<span class='warning'>The occupant is still moving around!</span>", \
+						"<span class='warning'>Sorry pal, safety procedures.</span>", \
+						"<span class='warning'>But it's not bedtime yet!</span>")]")
+					sedativeblock++
+				else if((!works_in_crit && occupant.health < 0) && !(href_list["chemical"] in crit_injectables))
+					to_chat(usr, "<span class='danger'>This person is not in good enough condition for sleepers to be effective! Use another means of treatment, such as cryogenics!</span>")
+				else
+					inject_chemical(usr,href_list["chemical"],text2num(href_list["amount"]))
+		if(href_list["info"])
+			if(info_hidden)
+				to_chat(usr, "<span class='danger'>The sleeper shows some information, but it's unintelligible.</span>")
+			else if(reagent_name(href_list["info"]))
+				to_chat(usr, "<span class='notice'>[available_options[href_list["info"]]]: [reagent_info(href_list["info"])]</span>")
+		if(href_list["wakeup"])
+			wakeup(usr)
+		if(href_list["eject"])
+			go_out(ejector = usr)
+		if(href_list["toggle_autoeject"])
+			auto_eject_after = !auto_eject_after
+		if(href_list["refresh"])
+			process()
+		add_fingerprint(usr)
+	return
+
+/obj/machinery/sleeper/proc/put_mob(mob/living/L, mob/user)
+	if(!istype(L))
+		return
+	if(istype(L, /mob/living/simple_animal) || istype(L, /mob/living/silicon)) //animals and robutts dont fit
+		return
+
+	if(L.locked_to)
+		var/datum/locking_category/category = L.locked_to.get_lock_cat_for(L)
+		if(!istype(category, /datum/locking_category/buckle/bed/roller))
+			return
+	else if(L.anchored)
+		return
+
+	if(user)
+		if(!ishigherbeing(user) && !isrobot(user)) //No ghosts or mice putting people into the sleeper
+			return
+		if(isrobot(user))
+			var/mob/living/silicon/robot/robit = usr
+			if(!HAS_MODULE_QUIRK(robit, MODULE_CAN_HANDLE_MEDICAL))
+				to_chat(user, "<span class='warning'>You do not have the means to do this!</span>")
+				return
+
+	for(var/mob/living/carbon/slime/S in range(1,L))
+		if(S.Victim == L)
+			if(user)
+				to_chat(user, "<span class='warning'>[L] will not fit into \the [src] because they have a slime latched onto their head.</span>")
+			return
+
+	if(occupant)
+		if(user)
+			to_chat(user, "<span class='notice'>\The [src] is already occupied!</span>")
+		return
+
+	if(user && user.pulling == L)
+		user.stop_pulling()
+	if(user)
+		add_fingerprint(user)
+	L.unlock_from() //We checked above that they can ONLY be buckled to a rollerbed to allow this to happen!
+	L.forceMove(src)
+	L.reset_view()
+	occupant = L
+	to_chat(L, "<span class='notice'><b>You feel an anaesthetising air surround you. You go numb as your senses turn inward.</b></span>")
+	process()
+	for(var/obj/OO in src)
+		if(OO in plugins)
+			continue
+		OO.forceMove(loc)
+	add_fingerprint(user)
+	if(!(stat & (BROKEN|NOPOWER|FORCEDISABLE)))
+		set_light(light_range_on, light_power_on)
+	update_icon()
+
+	if(user)
+		if(L == user)
+			visible_message("[user] climbs into \the [src].")
+		else
+			visible_message("[user] places \the [L] into \the [src].")
+	else
+		visible_message("\The [L] is placed into \the [src].")
+
+	sedativeblock = TRUE
+	sleep(drag_delay)
+	sedativeblock = FALSE
+
+/obj/machinery/sleeper/MouseDropTo(atom/movable/O as mob|obj, mob/user as mob)
+	if(!ismob(O)) //mobs only
+		return
+	if(O.loc == user || !isturf(O.loc) || !isturf(user.loc) || !user.Adjacent(O)) //no you can't pull things out of your ass
+		return
+	if(user.incapacitated() || user.lying) //are you cuffed, dying, lying, stunned or other
+		return
+	if(!Adjacent(user) || !user.Adjacent(src) || user.contents.Find(src)) // is the mob too far away from you, or are you too far away from the source
+		return
+
+	var/mob/living/L = O
+	if(!istype(L))
+		return
+
+	put_mob(L, user)
+
+/obj/machinery/sleeper/MouseDropFrom(over_object, src_location, var/turf/over_location, src_control, over_control, params)
+	if(!ishigherbeing(usr) && !isrobot(usr) || usr.incapacitated() || usr.lying)
+		return
+	if(!occupant)
+		to_chat(usr, "<span class='warning'>The sleeper is unoccupied!</span>")
+		return
+	if(isrobot(usr))
+		var/mob/living/silicon/robot/robit = usr
+		if(!HAS_MODULE_QUIRK(robit, MODULE_CAN_HANDLE_MEDICAL))
+			to_chat(usr, "<span class='warning'>You do not have the means to do this!</span>")
+			return
+	over_location = get_turf(over_location)
+	if(!istype(over_location) || over_location.density)
+		return
+	if(!Adjacent(over_location))
+		return
+	if(!(occupant == usr) && (!Adjacent(usr) || !usr.Adjacent(over_location)))
+		return
+	for(var/atom/movable/A in over_location.contents)
+		if(A.density)
+			if((A == src) || istype(A, /mob))
+				continue
+			return
+	if(occupant == usr)
+		visible_message("[usr] climbs out of \the [src].")
+	else
+		visible_message("[usr] removes [occupant.name] from \the [src].")
+	go_out(over_location, ejector = usr)
+
+
+/obj/machinery/sleeper/conveyor_act(var/atom/movable/AM, var/obj/machinery/conveyor/CB)
+	if(isliving(AM))
+		var/mob/living/L = AM
+		if(L.lying)
+			if(put_mob(L))
+				return TRUE
+	return FALSE
+
+/obj/machinery/sleeper/allow_drop()
+	return FALSE
+
+/obj/machinery/sleeper/blob_act()
+	if(prob(75))
+		for(var/atom/movable/A as mob|obj in src)
+			if(A in plugins)
+				continue
+			A.forceMove(loc)
+			A.blob_act()
+		qdel(src)
+	return
+
+/obj/machinery/sleeper/crowbarDestroy(mob/user, obj/item/tool/crowbar/I)
+	if(occupant)
+		to_chat(user, "<span class='warning'>You cannot disassemble \the [src], it's occupied.</span>")
+		return 0
+	return ..()
+
+//Handles installing a plugin for the specific machine, checking compatibility and other such functions.
+/obj/machinery/sleeper/proc/install_plugin(obj/item/weapon/obj_used, mob/user)
+	if(istype(obj_used, /obj/item/device/plugin))
+		if(!panel_open)
+			to_chat(user, "<span class='warning'>You need to open the maintenance panel to install this device.</span>")
+			return
+		if(occupant)
+			to_chat(user, "<span class='warning'>The sleeper must be empty in order to install this device.</span>")
+			return
+		for(var/obj/item/device/plugin/plug in plugins)
+			if(plug.solo)
+				to_chat(user, "<span class='warning'>There's nowhere to plug it in, all the plugs are used or gone!</span>")
+				return
+			if(istype(obj_used, plug))
+				to_chat(user, "<span class='warning'>This device is already installed.</span>")
+				return
+		to_chat(user, "You start installing \the [obj_used] to the machine.")
+		playsound(src, 'sound/items/Screwdriver.ogg', 100, 1)
+		if(do_after(user, src, 40))
+			if(!panel_open)
+				to_chat(user, "<span class='warning'>You go to plug the last cable in, but the panel was closed!</span>")
+				return
+			if(occupant)
+				to_chat(user, "<span class='warning'>A red light flashes on the module, someone must have gotten in during the installation process!</span>")
+				return
+			for(var/obj/item/device/plugin/plug in plugins)
+				if(plug.solo)
+					to_chat(user, "<span class='warning'>There's nowhere to plug it in, some plugs must have vanished while you were working!</span>")
+					return
+			if(!user.drop_item(obj_used, src))
+				to_chat(user, "<span class='warning'>You can't let go of \the [obj_used]!</span>")
+				return
+			to_chat(user, "You install \the [obj_used] to \the [src].")
+			var/obj/item/device/plugin/installed_plug = obj_used
+			if(plugins.len && installed_plug.solo)
+				for(var/atom/movable/AM in plugins)
+					var/target = get_offset_target_turf(src.loc, rand(5)-rand(5), rand(5)-rand(5))
+					AM.forceMove(src.loc)
+					spawn(1)
+						if(AM)
+							AM.throw_at(target, 5, 1)
+				visible_message("<span class='danger'>\The [src] suddenly ejects its other plugins!</span>")
+				plugins = list()
+			plugins += obj_used
+			RefreshParts()
+
+/obj/machinery/sleeper/attackby(obj/item/weapon/obj_used, mob/user)
+	if(istype(obj_used, /obj/item/device/plugin))
+		install_plugin(obj_used, user)
+		return
+	if(!istype(obj_used, /obj/item/weapon/grab))
+		return ..()
+	else
+		if(..())
+			return TRUE
+
+	var/obj/item/weapon/grab/tar_grab = obj_used
+	if(!(ismob(tar_grab.affecting)) || tar_grab.affecting.locked_to)
+		return
+
+	if(occupant)
+		to_chat(user, "<span class='notice'><B>The sleeper is already occupied!</B></span>")
+		return
+
+	for(var/mob/living/carbon/slime/tar_slime in range(1,tar_grab.affecting))
+		if(tar_slime.Victim == tar_grab.affecting)
+			to_chat(usr, "[tar_grab.affecting.name] will not fit into \the [src] because they have a slime latched onto their head.")
+			return
+
+	visible_message("[user] places [tar_grab.affecting.name] into \the [src].")
+
+	var/mob/tar_mob = tar_grab.affecting
+	if(!isliving(tar_mob))
+		return
+	put_mob(tar_mob, user)
+
+/obj/machinery/sleeper/attack_hand(mob/user)
+	if(!isobserver(user) && (user.loc == src || (!Adjacent(user)&&!issilicon(user)) || user.incapacitated()))
+		return
+	interact(user)
+
+/obj/machinery/sleeper/ex_act(severity)
+	switch(severity)
+		if(1.0)
+			for(var/atom/movable/A as mob|obj in src)
+				if(A in plugins)
+					continue
+				A.forceMove(loc)
+				ex_act(severity)
+			qdel(src)
+			return
+		if(2.0)
+			if(prob(50))
+				for(var/atom/movable/A as mob|obj in src)
+					if(A in plugins)
+						continue
+					A.forceMove(loc)
+					ex_act(severity)
+				qdel(src)
+				return
+		if(3.0)
+			if(prob(25))
+				for(var/atom/movable/A as mob|obj in src)
+					if(A in plugins)
+						continue
+					A.forceMove(loc)
+					ex_act(severity)
+				qdel(src)
+				return
+	return
+
+/obj/machinery/sleeper/emp_act(severity)
+	if(stat & (BROKEN|NOPOWER|FORCEDISABLE))
+		..(severity)
+		return
+	if(occupant)
+		go_out()
+	..(severity)
+
+/obj/machinery/sleeper/proc/cook(var/cook_setting)
+	if(!(cook_setting in available_options))
+		return
+	var/cooktime = available_options[cook_setting]
+	target_time = world.time + cooktime
+	on = TRUE
+	setting = cook_setting
+	update_icon()
+
+/obj/machinery/sleeper/proc/wakeup(mob/living/user)
+	if(on)
+		to_chat(user, "<span class='warning'>\The [src] is busy.</span>")
+		return FALSE
+	if(!occupant)
+		to_chat(user, "<span class='warning'>There's no occupant in \the [src]!</span>")
+		return FALSE
+	if(occupant.stat == CONSCIOUS)
+		to_chat(user, "<span class='warning'>The occupant is already awake.</span>")
+		return FALSE
+	if(occupant.stat == DEAD)
+		to_chat(user, "<span class='warning'>Can't wake up.</span>")
+		return FALSE
+	. = TRUE //Returning TRUE means we successfully began the wake-up cycle. We will return immediately as the spawn() begins, not at the end.
+	on = TRUE
+	process()
+
+	spawn(sleeptime)
+		if(!src || !on) //the !src check is redundant from the nature of spawn() if I understand correctly, but better be safe than sorry
+			return
+		if(occupant)
+			occupant.reagents.remove_reagents(list(STOXIN, STOXIN2, VALERENIC_ACID, CHLORALHYDRATE),1000)
+			occupant.sleeping = 0
+			occupant.paralysis = 0
+			if(occupant.resting)
+				occupant.rest_action()
+		on = FALSE
+		if(auto_eject_after)
+			go_out(ejector = user)
+		else
+			process()
+
+/obj/machinery/sleeper/Exited(var/atom/movable/O) // Used for teleportation from within the sleeper.
+	if (O == occupant)
+		occupant = null
+		update_icon()
+	..()
+
+/obj/machinery/sleeper/proc/go_out(var/exit = loc, var/mob/ejector)
+	var/mob/old_occupant = occupant
+	if(!occupant)
+		return FALSE
+	if(awaken) //no escape
+		return FALSE
+	for(var/atom/movable/x in contents)
+		if(x in component_parts)
+			continue
+		if(x in plugins)
+			continue
+		x.forceMove(loc)
+	if(!old_occupant.gcDestroyed)
+		old_occupant.forceMove(exit)
+		old_occupant.reset_view()
+		if(istype(ejector) && ejector != old_occupant)
+			var/obj/structure/bed/roller/B = locate() in exit
+			if(B)
+				B.buckle_mob(old_occupant, ejector)
+				ejector.start_pulling(B)
+	update_icon()
+	playsound(src, hiss_noise, 40, 1)
+	process()
+	return TRUE
+
+/obj/machinery/sleeper/proc/inject_chemical(mob/living/user as mob, chemical, amount)
+	if(!occupant)
+		to_chat(user, "<span class='warning'>There's no occupant in the sleeper!</span>")
+		return
+	if(isnull(occupant.reagents))
+		to_chat(user, "<span class='warning'>The occupant appears to somehow lack a bloodstream. Please consult a shrink.</span>")
+		return
+	if(!emagged && occupant.reagents.get_reagent_amount(chemical) + amount > 20)
+		to_chat(user, "<span class='warning'>Overdose Prevention System: The occupant already has enough [available_options[chemical]] in their system.</span>")
+		return
+
+	//Handle Locutogen messaging, otherwise, inject the chemical
+	if(chemical == LOCUTOGEN)
+		var/reason = stripped_input(usr,"Please encode your message.","Locutogen Autoencoder","",REASON_LEN)
+		if(!reason)
+			return
+		occupant.reagents.add_reagent(chemical, amount, name_override = available_options[chemical])
+		var/datum/reagent/temp_hearer/D = occupant.reagents.get_reagent(LOCUTOGEN)
+		playsound(occupant, 'sound/effects/bubbles.ogg', 20, -3)
+		D.set_phrase(sanitize(reason))
+	else
+		occupant.reagents.add_reagent(chemical, amount, name_override = available_options[chemical])
+
+	//Advertising. Thanks, Dan!
+	if(advertising && !ad_cooldown)
+		say(pick(ad_list))
+		ad_cooldown = TRUE
+		spawn(120 SECONDS)
+			ad_cooldown = FALSE
+
+	if(emagged) // Fake reagent chat reports if over 20 units.
+		if(occupant.reagents.get_reagent_amount(chemical) < 20)
+			to_chat(user, "<span class='notice'>Occupant now has [occupant.reagents.get_reagent_amount(chemical)] units of [available_options[chemical]] in their bloodstream.</span>")
+			return
+		to_chat(user, "<span class='notice'>Occupant now has 20 units of [available_options[chemical]] in their bloodstream.</span>")
+		return
+
+	to_chat(user, "<span class='notice'>Occupant now has [occupant.reagents.get_reagent_amount(chemical)] units of [available_options[chemical]] in their bloodstream.</span>")
+	return
+
+/obj/machinery/sleeper/verb/eject()
+	set name = "Eject Sleeper"
+	set category = "Object"
+	set src in oview(1)
+	if(usr.isUnconscious())
+		return
+	go_out(ejector = usr)
+	add_fingerprint(usr)
+	set_light(0)
+	return
+
+/obj/machinery/sleeper/verb/move_inside()
+	set name = "Enter Sleeper"
+	set category = "Object"
+	set src in oview(1)
+	if(usr.isUnconscious() || !(ishuman(usr) || ismonkey(usr)))
+		return
+
+	if(occupant)
+		to_chat(usr, "<span class='notice'><B>\The [src] is already occupied!</B></span>")
+		return
+	if(usr.incapacitated() || usr.lying) //are you cuffed, dying, lying, stunned or other
+		return
+	for(var/mob/living/carbon/slime/M in range(1,usr))
+		if(M.Victim == usr)
+			to_chat(usr, "You're too busy getting your life sucked out of you.")
+			return
+	if(usr.locked_to)
+		return
+	visible_message("[usr] starts climbing into \the [src].")
+	if(do_after(usr, src, drag_delay))
+		if(occupant)
+			to_chat(usr, "<span class='notice'><B>The sleeper is already occupied!</B></span>")
+			return
+		if(usr.locked_to)
+			return
+		usr.stop_pulling()
+		usr.forceMove(src)
+		usr.reset_view()
+		occupant = usr
+		process()
+		for(var/obj/O in src)
+			if(O in plugins)
+				continue
+			qdel(O)
+		add_fingerprint(usr)
+		if(!(stat & (BROKEN|NOPOWER|FORCEDISABLE)))
+			set_light(light_range_on, light_power_on)
+		update_icon()
+		return
+	return
+
+
+/obj/machinery/sleeper/AltClick()
+	if(!usr.incapacitated() && Adjacent(usr) && !(stat & (FORCEDISABLE|NOPOWER|BROKEN) && usr.dexterity_check()))
+		if(wakeup(usr))
+			visible_message("<span class='notice'>\The [src] pings softly: 'Initiating wake-up cycle...' </span>")
+
+/obj/machinery/sleeper/process()
+	if(awaken && occupant && !(stat & FORCEDISABLE))
+		awaken_clown()
+	if(funny && occupant)
+		occupant.druggy = max(occupant.druggy, 2)
+	if(stat & (FORCEDISABLE|NOPOWER|BROKEN))
+		return
+	updateUsrDialog()
+	return
+
+/obj/machinery/sleeper/proc/awaken_clown()
+	awaken = TRUE //next person who's inside is locked in.
+	if(!occupant)
+		return
+	overlays = null
+	stat |= FORCEDISABLE
+	flick('icons/obj/machines/plugins/clownawakens.dmi',src)
+	sleep(8)
+	playsound(src, 'sound/items/cardshuffle.ogg', 70, 1)
+	sleep(13)
+	playsound(src, 'sound/items/AirHorn.ogg', 70, 1)
+	sleep(9)
+	var/mob/living/simple_animal/rampagingspacehog/sleeperclown/curse = new(loc)
+	occupant.nobreath = 15
+	occupant.forceMove(curse)
+	icon = null
+	qdel(src)
+
+/obj/machinery/sleeper/upgraded
+	name = "advanced sleeper"
+	component_parts = newlist(
+		/obj/item/weapon/circuitboard/sleeper,
+		/obj/item/weapon/stock_parts/scanning_module/adv/phasic,
+		/obj/item/weapon/stock_parts/manipulator/nano/pico,
+		/obj/item/weapon/stock_parts/manipulator/nano/pico
+	)
+
+/obj/machinery/sleeper/clown
+	name = "clown sleeper"
+
+/obj/machinery/sleeper/clown/New()
+	plugins += new /obj/item/device/plugin/sleeper/clown()
+	..()
+
+/////////////////////////////////////////
+// MANCROWAVE
+/////////////////////////////////////////
+
+/obj/machinery/sleeper/mancrowave
+	name = "thermal homeostasis regulator"
+	desc = "The new generation 'minicrowave' from Mancrowave Inc. It has the same satisfying ping as the classic."
+	base_icon = "mancrowave"
+	icon_state = "mancrowave_open"
+	component_parts = newlist(
+		/obj/item/weapon/circuitboard/sleeper/mancrowave,
+		/obj/item/weapon/stock_parts/scanning_module,
+		/obj/item/weapon/stock_parts/micro_laser,
+		/obj/item/weapon/stock_parts/micro_laser
+	)
+	setting = "Thermoregulate"
+	available_options = list("Thermoregulate" = 50)
+	light_color = LIGHT_COLOR_ORANGE
+	automatic = TRUE
+	drag_delay = 0
+	machine_flags = SCREWTOGGLE | CROWDESTROY | EMAGGABLE | EJECTNOTDEL
+	var/galize = 0
+	accepts_plugins = FALSE
+
+/obj/machinery/sleeper/mancrowave/New()
+	if(Holiday == APRIL_FOOLS_DAY)
+		base_icon = "galo"
+		icon_state = "galo_open"
+		galize = 1
+		deff_icon = FALSE
+	..()
+	update_icon()
+
+/obj/machinery/sleeper/mancrowave/go_out(var/exit = loc, var/ejector)
+	if(on && !emagged)
+		return FALSE
+	else
+		on = FALSE
+		..()
+
+/obj/machinery/sleeper/mancrowave/update_icon()
+	if(!occupant)
+		icon_state = "[base_icon]_open"
+		set_light(0)
+		return
+	if(emagged)
+		light_color = LIGHT_COLOR_RED
+		icon_state = "[base_icon]_emagged"
+	else
+
+		light_color = LIGHT_COLOR_ORANGE
+		icon_state = "[base_icon]_running"
+	if(on)
+		set_light(light_range_on, light_power_on)
+	else
+		set_light(0)
+
+/obj/machinery/sleeper/mancrowave/emag_act(mob/user)
+	if(!emagged)
+		emagged = TRUE
+		if(user)
+			to_chat(user, "<span class='warning'>You short out the safety features of \the [src], and feel like a MAN!	</span>")
+		available_options = list("Thermoregulate" = 50,"Rare" = 500,"Medium" = 600,"Well Done" = 700)
+		update_icon()
+		name = "THE MANCROWAVE"
+		return 1
+	return -1 //WHY DO YOU DO THIS TO ME
+
+/obj/machinery/sleeper/mancrowave/RefreshParts()
+
+/obj/machinery/sleeper/mancrowave/interact(var/mob/user)
+	var/dat = "<font color='blue'><B>Occupant Statistics:</B></FONT><BR>"
+	if(occupant)
+		var/t1
+		switch(occupant.stat)
+			if(CONSCIOUS)
+				t1 = "Conscious"
+			if(UNCONSCIOUS)
+				t1 = "<font color='blue'>Unconscious</font>"
+			if(DEAD)
+				t1 = "<font color='red'>*dead*</font>"
+			else
+		dat += text("[]\tHealth %: [] ([])</FONT><BR>", (occupant.health > 50 ? "<font color='blue'>" : "<font color='red'>"), occupant.health, t1)
+		if(iscarbon(occupant))
+			var/mob/living/carbon/C = occupant
+			dat += text("[]\t-Pulse, bpm: []</FONT><BR>", (C.pulse == PULSE_NONE || C.pulse == PULSE_2SLOW || C.pulse == PULSE_THREADY ? "<font color='red'>" : "<font color='blue'>"), C.get_pulse(GETPULSE_TOOL))
+			dat +=  text("[]\t -Core Temperature: []&deg;C </FONT><BR></span>", (C.undergoing_hypothermia() ? "<font color='red'>" : "<font color='blue'>"), C.bodytemperature-T0C)
+		dat += "<HR><b>Cook settings:</b><BR>"
+		for(var/cook_setting in available_options)
+			dat += "<a href ='?src=\ref[src];cook=[cook_setting]'>[cook_setting] - [available_options[cook_setting]/10] seconds</a>"
+			dat += "<br>"
+	else
+		dat += "\The [src] is empty."
+	dat += "<HR><A href='?src=\ref[src];refresh=1'>Refresh meter readings each second</A><BR>"
+	dat += "<A href='?src=\ref[src];auto=1'>Turn [automatic ? "off": "on" ] Automatic Thermoregulation.</A><BR>"
+	dat += "[(emagged) ? "<A href='?src=\ref[src];security=1'>Re-enable Security Features.</A><BR>" : ""]"
+	dat += "[(on) ? "<A href='?src=\ref[src];turnoff=1'>\[EMERGENCY STOP\]</A> <i>: cancels the current job.</i><BR>" : ""]"
+	dat += text("<BR><BR><A href='?src=\ref[];mach_close=\ref[src]'>Close</A>", user)
+	user << browse(HTML_SKELETON(dat), "window=\ref[src];size=400x500")
+	onclose(user, "\ref[src]")
+
+
+/obj/machinery/sleeper/mancrowave/Topic(href, href_list)
+	if(..())
+		return TRUE
+	if(href_list["cook"])
+		if(stat & (NOPOWER|BROKEN|FORCEDISABLE))
+			return
+		if(on)
+			to_chat(usr, "<span class='danger'>\The [src] is already turned on!</span>")
+			return
+		if(occupant)
+			if((locate(/obj/item/weapon/disk/nuclear) in get_contents_in_object(occupant)) && href_list["cook"] != "Thermoregulate" )
+				to_chat(usr, "<span class='danger'>Even with the safety features turned off, \the [src] refuses to cook something inside of it!</span>")
+			else
+				cook(href_list["cook"])
+	if(href_list["refresh"])
+		updateUsrDialog()
+	if(href_list["auto"])
+		automatic = !automatic
+	if(href_list["turnoff"])
+		on = FALSE
+		go_out(ejector = usr)
+		update_icon()
+	if(href_list["security"])
+		if(on)
+			to_chat(usr, "<span class='danger'>The security features of \the [src] cannot be re-enabled when it is on!</span>")
+			return
+		emagged = FALSE
+		name = "thermal homeostasis regulator"
+		available_options = list("Thermoregulate" = 50)
+		update_icon()
+	add_fingerprint(usr)
+	updateUsrDialog()
+
+/obj/machinery/sleeper/mancrowave/process()
+	..()
+	if(stat & (NOPOWER|BROKEN|FORCEDISABLE))
+		return
+	if(automatic && occupant && !on)
+		cook("Thermoregulate")
+	if(!istype(occupant,/mob/living/carbon))
+		go_out()
+		return
+	if(!(world.time >= target_time && on)) //If we're currently still cooking
+		var/targettemperature = T0C+32+(available_options["[setting]"]/10)
+		var/emaggedbonus = (emagged) ? 10 : 1
+		var/timefraction = (available_options["[setting]"])/250*emaggedbonus
+		var/tempdifference = abs(targettemperature - occupant.bodytemperature)
+		if(occupant.bodytemperature < targettemperature)
+			occupant.bodytemperature = min(occupant.bodytemperature + tempdifference*(timefraction),targettemperature)
+		else
+			occupant.bodytemperature = max(occupant.bodytemperature - tempdifference*(timefraction),targettemperature)
+	else
+		switch(setting)
+			if("Thermoregulate")
+				occupant.bodytemperature = (T0C + 37)
+				occupant.sleeping = 0
+				occupant.paralysis = 0
+				go_out()
+			if("Rare")
+				QDEL_NULL(occupant)
+				for(var/i = 1;i < 5;i++)
+					new /obj/item/weapon/reagent_containers/food/snacks/soylentgreen(loc)
+			if("Medium")
+				QDEL_NULL(occupant)
+				for(var/i = 1;i < 5;i++)
+					new /obj/item/weapon/reagent_containers/food/snacks/badrecipe(loc)
+			if("Well Done")
+				QDEL_NULL(occupant)
+				var/obj/effect/decal/cleanable/ash/ashed = new /obj/effect/decal/cleanable/ash(loc)
+				ashed.layer = layer + 0.01
+		playsound(src, 'sound/machines/ding.ogg', 50, 1)
+		on = FALSE
+		if(occupant)
+			if(ishuman(occupant))
+				var/mob/living/carbon/human/H = occupant
+				if(isdiona(H))
+					if(H.my_appearance.h_style != "Popped Hair")
+						to_chat(H, "<span class = 'notice'>Your head pops!</span>")
+						playsound(src, 'sound/effects/pop.ogg', 50, 1)
+						H.my_appearance.h_style = "Popped Hair"
+						H.update_hair()
+				else if(isjusthuman(H) && galize == 1)
+					H.GALize()
+			go_out()
+		update_icon()
+
+/obj/machinery/sleeper/mancrowave/install_plugin(obj/item/weapon/obj_used, mob/user)
+	//does not accept plugins
+	return
+
+/obj/machinery/sleeper/mancrowave/galo
+	name = "tanning bed"
+	desc = "An experimental G4L-0 model thermal homeostasis regulator. Just looking at it makes you feel unusually excited."
+	galize = 1
+	deff_icon = FALSE
+	base_icon = "galo"
+	icon_state = "galo_open"
