@@ -45512,7 +45512,7 @@
 	},
 /turf/simulated/floor/plating/damaged/broken,
 /area/derelictparts/library)
-"fAG" = (
+"sausag" = (
 /obj/structure/closet/crate/bin,
 /obj/abstract/map/spawner/maint/lowchance,
 /turf/simulated/floor/plating,
@@ -276200,7 +276200,7 @@ aaa
 aaa
 bhI
 sHL
-fAG
+sausag
 fXH
 eHm
 heL

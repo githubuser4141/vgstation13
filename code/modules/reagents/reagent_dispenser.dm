@@ -415,7 +415,7 @@
 			specialingredients += list(HONKSERUM, LUBE, BANANA)
 		if(241 to 360)
 			//assorted shit
-			selectedfirstname = pickweight(list("Horny" = 70, "Sneed's" = 110, "The Retarded" = 75, "The Salty" = 25, "Syndicate" = 50, "Tum'mie" = 30, "The Autistic" = 75, "DO NOT REDEEM" = 50, "Slow Moe's" = 50))
+			selectedfirstname = pickweight(list("Horny" = 70, "Sneed's" = 110, "The sillyed" = 75, "The Salty" = 25, "Syndicate" = 50, "Tum'mie" = 30, "The Autistic" = 75, "DO NOT REDEEM" = 50, "Slow Moe's" = 50))
 			specialingredients += list(CHILLWAX, HONKSERUM, GYRO, MEDCOFFEE, MONSTERMASH, SPORTDRINK, QUANTUM)
 		if(361 to 480)
 			//medical?

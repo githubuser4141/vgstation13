@@ -5,7 +5,7 @@
 // <3 goons.  I don't love your forums pricey admittance fee, but I love you.
 /mob/living/simple_animal/hostile/retaliate/cluwne
 	name = "cluwne"
-	desc = "This poor creature used to be human.  Before it pissed off the Gods, that is.  Now it is retarded, miserable, and has bikehorns for an arm."
+	desc = "This poor creature used to be human.  Before it pissed off the Gods, that is.  Now it is sillyed, miserable, and has bikehorns for an arm."
 	icon_state = "cluwne"
 	icon_living = "cluwne"
 	icon_dead = "cluwne_dead"

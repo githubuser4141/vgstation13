@@ -312,7 +312,7 @@ var/list/blacklisted_mobs = list(
 		/mob/living/simple_animal/hostile/asteroid/hivelordbrood,			// Your motherfucking life ends in 5 seconds.
 		/mob/living/simple_animal/hostile/asteroid/hivelordbrood/guardian,	// Ditto
 		/mob/living/simple_animal/hologram,									// Can't live outside the holodeck.
-		/mob/living/simple_animal/hostile/carp/holocarp,					// These can but they're just a retarded hologram carp reskin for the love of god.
+		/mob/living/simple_animal/hostile/carp/holocarp,					// These can but they're just a sillyed hologram carp reskin for the love of god.
 		/mob/living/slime_pile,												// They are dead.
 		/mob/living/adamantine_dust, 										// Ditto
 		/mob/living/simple_animal/hostile/viscerator,						// Nope.

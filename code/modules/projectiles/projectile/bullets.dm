@@ -1078,10 +1078,10 @@
 	embed_message = FALSE
 	variance_angle = 50
 
-/obj/item/projectile/bullet/faggot
-	name = "high-speed faggot"
+/obj/item/projectile/bullet/sausage
+	name = "high-speed sausage"
 	icon = 'icons/obj/food.dmi'
-	icon_state = "faggot"
+	icon_state = "sausage"
 	damage = 10
 
 /obj/item/projectile/bullet/syringe

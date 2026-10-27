@@ -8837,7 +8837,7 @@
 /area/lamprey/mechanicsoffice{
 	holomap_draw_override = 1
 	})
-"faG" = (
+"sausag" = (
 /obj/structure/hanging_lantern,
 /turf/simulated/floor/mineral/silver{
 	name = "engraved floor"
@@ -346248,7 +346248,7 @@ fes
 pKy
 tKG
 fes
-faG
+sausag
 xRK
 vWb
 vWb
@@ -346744,7 +346744,7 @@ dgp
 fes
 fes
 fes
-faG
+sausag
 xRK
 fes
 jVl

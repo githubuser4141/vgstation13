@@ -66411,7 +66411,7 @@
 	},
 /turf/simulated/floor,
 /area/hallway/primary/starboard)
-"fAg" = (
+"sausag" = (
 /obj/machinery/atm{
 	pixel_y = 32
 	},
@@ -249747,7 +249747,7 @@ cfx
 uJW
 lzT
 cmT
-fAg
+sausag
 bZg
 mhL
 cvx

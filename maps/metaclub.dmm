@@ -117445,7 +117445,7 @@
 /area/maintenance/fpmaint2{
 	name = "Port Maintenance"
 	})
-"fag" = (
+"sausag" = (
 /obj/effect/decal/remains/human/noskull,
 /obj/item/weapon/skull,
 /turf/unsimulated/floor/asteroid,
@@ -1260943,7 +1260943,7 @@ eeb
 eeb
 eeb
 eeb
-fag
+sausag
 eeb
 eeb
 eqM

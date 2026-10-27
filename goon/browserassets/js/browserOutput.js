@@ -912,7 +912,7 @@ $(function() {
 	})
 
 	// Tell BYOND to give us a macro list.
-	// I don't know why but for some retarded reason,
+	// I don't know why but for some sillyed reason,
 	// You need to activate hotkeymode before you can winget the macros in it.
 	runByond('byond://winset?id=mainwindow&macro=hotkeymode');
 	runByond('byond://winset?id=mainwindow&macro=macro');

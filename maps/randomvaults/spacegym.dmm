@@ -118,7 +118,7 @@
 /turf/simulated/floor/airless,
 /area/vault/gym)
 "A" = (
-/obj/item/weapon/reagent_containers/food/snacks/faggot,
+/obj/item/weapon/reagent_containers/food/snacks/sausage,
 /turf/simulated/floor/airless,
 /area/vault/gym)
 "B" = (

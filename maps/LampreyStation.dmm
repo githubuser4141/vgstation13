@@ -117559,7 +117559,7 @@
 	name = "plating"
 	},
 /area/centcom/suppy)
-"fag" = (
+"sausag" = (
 /obj/machinery/conveyor{
 	dir = 9;
 	id_tag = "garbage";
@@ -117749,7 +117749,7 @@
 	name = "plating"
 	},
 /area/centcom/suppy)
-"faG" = (
+"sausag" = (
 /obj/structure/grille/invulnerable,
 /obj/structure/window/reinforced{
 	dir = 8
@@ -128505,7 +128505,7 @@
 	},
 /turf/space,
 /area/shuttle/specops/centcom)
-"fAg" = (
+"sausag" = (
 /turf/simulated/wall/shuttle/black,
 /area/shuttle/specops/centcom)
 "fAh" = (
@@ -128721,7 +128721,7 @@
 	name = "dark field"
 	},
 /area/lamprey/voxmetaclub)
-"fAG" = (
+"sausag" = (
 /obj/structure/shuttle/diag_wall/black{
 	dir = 8
 	},
@@ -486186,11 +486186,11 @@ frG
 frG
 frD
 aaa
-fAg
+sausag
 fyr
 fyr
 fyr
-fAg
+sausag
 aaa
 fxe
 aaa
@@ -486688,11 +486688,11 @@ fvE
 frh
 frh
 aaa
-fAg
+sausag
 fys
 fys
 fys
-fAg
+sausag
 aaa
 fxe
 aaa
@@ -487190,11 +487190,11 @@ fvF
 fwi
 frD
 aaa
-fAg
+sausag
 fyt
 fys
 fzG
-fAg
+sausag
 aaa
 fxe
 aaa
@@ -487692,11 +487692,11 @@ fvG
 fwj
 fti
 frD
-fAg
+sausag
 fyu
 fys
 fzH
-fAg
+sausag
 aaa
 fxe
 aaa
@@ -488198,7 +488198,7 @@ fxu
 fys
 fys
 fzH
-fAg
+sausag
 aaa
 fxe
 aaa
@@ -488700,7 +488700,7 @@ fxu
 fys
 fys
 fzH
-fAg
+sausag
 aaa
 fxe
 aaa
@@ -489198,11 +489198,11 @@ frG
 fwl
 fti
 frD
-fAg
+sausag
 fyv
 fys
 fzG
-fAg
+sausag
 aaa
 fxe
 aaa
@@ -489700,11 +489700,11 @@ fvI
 fwm
 frD
 aaa
-fAg
+sausag
 fyw
 fys
 fzI
-fAg
+sausag
 aaa
 fxe
 aaa
@@ -490203,9 +490203,9 @@ frh
 frh
 aaa
 fxv
-fAg
+sausag
 fze
-fAg
+sausag
 fzK
 aaa
 fxe
@@ -514215,7 +514215,7 @@ eZf
 eZu
 eZe
 eZe
-fag
+sausag
 eZf
 eYX
 eZe
@@ -537394,7 +537394,7 @@ fwA
 fwA
 fwA
 fwA
-fAG
+sausag
 eYT
 eYT
 fta
@@ -641760,7 +641760,7 @@ aaa
 aaa
 eYZ
 eZE
-faG
+sausag
 eZE
 eZj
 aaa
@@ -649270,7 +649270,7 @@ eZE
 eZE
 eZE
 eZE
-faG
+sausag
 fbR
 abJ
 eLo
@@ -656353,7 +656353,7 @@ aaa
 aaa
 aaa
 faw
-faG
+sausag
 eZj
 abJ
 abJ
@@ -656857,7 +656857,7 @@ eZE
 fap
 frT
 frT
-faG
+sausag
 eZj
 abJ
 abJ
@@ -658335,7 +658335,7 @@ eLo
 abJ
 abJ
 eZa
-faG
+sausag
 eZE
 eZj
 abJ
@@ -674910,7 +674910,7 @@ eZE
 eZE
 eZE
 eZE
-faG
+sausag
 fao
 abJ
 aOe
@@ -675890,8 +675890,8 @@ aaa
 eYZ
 eZE
 eZE
-faG
-faG
+sausag
+sausag
 eZE
 eZE
 eZj
@@ -676364,7 +676364,7 @@ abJ
 aOe
 abJ
 faw
-faG
+sausag
 eZE
 eZE
 eZE

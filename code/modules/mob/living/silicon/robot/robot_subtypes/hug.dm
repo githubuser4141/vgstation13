@@ -1,4 +1,4 @@
-//Moving hugborgs to an easy-to-spawn subtype because they were as retarded as the syndie one.
+//Moving hugborgs to an easy-to-spawn subtype because they were as sillyed as the syndie one.
 //Be sure to update the vars if you ever add even more weird AI link stuff.
 /mob/living/silicon/robot/hugborg
 	cell_type = /obj/item/weapon/cell/super

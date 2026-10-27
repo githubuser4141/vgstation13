@@ -1437,19 +1437,19 @@
 	reagents.add_reagent(COLORFUL_REAGENT, 1)
 	bitesize = 2
 
-/obj/item/weapon/reagent_containers/food/snacks/faggot
-	name = "faggot"
+/obj/item/weapon/reagent_containers/food/snacks/sausage
+	name = "sausage"
 	desc = "A great meal all round. Not a cord of wood."
-	icon_state = "faggot"
+	icon_state = "sausage"
 	food_flags = FOOD_MEAT
 	base_crumb_chance = 0
 
-/obj/item/weapon/reagent_containers/food/snacks/faggot/New()
+/obj/item/weapon/reagent_containers/food/snacks/sausage/New()
 	..()
 	reagents.add_reagent(NUTRIMENT, 3)
 	bitesize = 2
 
-/obj/item/weapon/reagent_containers/food/snacks/faggot/processed/New()
+/obj/item/weapon/reagent_containers/food/snacks/sausage/processed/New()
 	..()
 	reagents.clear_reagents()
 

@@ -177,7 +177,7 @@
 				var/list/nearby = viewers(1, src)
 				for(var/mob/M in nearby)
 					if(M.machine == src)
-						inserted_battery.battery_effect.DoEffectTouch(M) THIS IS RETARDED! - Angelite */
+						inserted_battery.battery_effect.DoEffectTouch(M) THIS IS sillyED! - Angelite */
 
 		//if there's no charge left, finish
 		if(inserted_battery.stored_charge <= 0)

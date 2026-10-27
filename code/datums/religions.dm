@@ -717,21 +717,21 @@ var/list/all_bible_styles = list(
 /datum/religion/homosexuality/equip_chaplain(var/mob/living/carbon/human/H)
 	H.equip_or_collect(new /obj/item/clothing/under/darkholme(H), slot_w_uniform)
 
-/datum/religion/retard
-	name = "Retardation"
+/datum/religion/silly
+	name = "sillyation"
 	deity_name = "Brian Damag" //Ha
 	bible_names = list("Woody's Got Wood: The Aftermath", "War of the Cocks", "Sweet Bro and Hella Jef: Expanded Edition", "The Book of Pomf")
 	bible_type = /obj/item/weapon/storage/bible/booze
-	male_adept = "Retard"
-	female_adept = "Retard"
+	male_adept = "silly"
+	female_adept = "silly"
 	keys = list("lol", "wtf", "badmin", "shitmin", "deadmin", "dickbutt", ":^)", "XD", "le", "meme", "memes", "ayy", "ayy lmao", "lmao", "reddit", "4chan", "tumblr", "9gag", "brian damag")
 	convert_method = "standing both next to a table."
 	preferred_incense = /obj/item/weapon/storage/fancy/incensebox/banana
 
-/datum/religion/retard/equip_chaplain(var/mob/living/carbon/human/H)
-	H.setBrainLoss(100) //Starts off retarded as fuck, that'll teach him
+/datum/religion/silly/equip_chaplain(var/mob/living/carbon/human/H)
+	H.setBrainLoss(100) //Starts off sillyed as fuck, that'll teach him
 
-/datum/religion/retard/convertCeremony(var/mob/living/preacher, var/mob/living/subject)
+/datum/religion/silly/convertCeremony(var/mob/living/preacher, var/mob/living/subject)
 	var/obj/structure/table/T = locate(/obj/structure/table/, oview(1, preacher)) // is there a table near us !
 	if (!T)
 		to_chat(preacher, "<span class='warning'>You need to stand next to a table!</span>")
@@ -767,7 +767,7 @@ var/list/all_bible_styles = list(
 	convert(subject, preacher)
 	return TRUE
 
-/datum/religion/retard/convert(var/mob/living/preacher, var/mob/living/subject, var/can_renounce = TRUE)
+/datum/religion/silly/convert(var/mob/living/preacher, var/mob/living/subject, var/can_renounce = TRUE)
 	. = ..()
 	if (subject)
 		subject.adjustBrainLoss(100) // Welcome to the club

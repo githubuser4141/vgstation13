@@ -72,7 +72,7 @@
 		"Sweets" = /obj/item/weapon/reagent_containers/food/snacks/sweet,
 		"Gum" = /obj/item/gum,
 		"Popcorn" = /obj/item/weapon/reagent_containers/food/snacks/popcorn,
-		"Faggot" = /obj/item/weapon/reagent_containers/food/snacks/faggot,
+		"sausage" = /obj/item/weapon/reagent_containers/food/snacks/sausage,
 		"Sausage" = /obj/item/weapon/reagent_containers/food/snacks/sausage,
 		"Toast" = /obj/item/weapon/reagent_containers/food/snacks/breadslice/paibread,
 		"Cookie" = /obj/item/weapon/reagent_containers/food/snacks/PAIcookie,

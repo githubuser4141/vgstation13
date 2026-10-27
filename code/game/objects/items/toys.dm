@@ -1057,7 +1057,7 @@
 /obj/item/toy/gasha/snowflake
 	name = "toy snowflake"
 	desc = "What a snowflake."
-	icon_state = "fag"
+	icon_state = "sausag"
 
 /obj/item/toy/gasha/shade
 	name = "toy shade"

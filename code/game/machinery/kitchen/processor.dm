@@ -77,7 +77,7 @@
 
 /datum/food_processor_process/food/meat
 	input = /obj/item/weapon/reagent_containers/food/snacks/meat
-	output = /obj/item/weapon/reagent_containers/food/snacks/faggot/processed
+	output = /obj/item/weapon/reagent_containers/food/snacks/sausage/processed
 
 /datum/food_processor_process/food/potato
 	input = /obj/item/weapon/reagent_containers/food/snacks/grown/potato

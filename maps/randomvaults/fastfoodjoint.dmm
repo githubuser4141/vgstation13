@@ -344,7 +344,7 @@
 /obj/item/weapon/reagent_containers/food/snacks/fries/cone{
 	pixel_x = -2
 	},
-/obj/item/weapon/reagent_containers/food/snacks/faggot{
+/obj/item/weapon/reagent_containers/food/snacks/sausage{
 	pixel_x = 8;
 	pixel_y = -4
 	},

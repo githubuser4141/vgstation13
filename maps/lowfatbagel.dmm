@@ -102447,7 +102447,7 @@
 /area/engineering/atmos_control)
 "wyU" = (
 /obj/item/weapon/paper/iou{
-	info = "Haha, took a lot of effort to get here? There's nothing here though! Bet you feel pretty retarded now, huh?";
+	info = "Haha, took a lot of effort to get here? There's nothing here though! Bet you feel pretty sillyed now, huh?";
 	name = "paper- 'Secrets of the St-'"
 	},
 /turf/space,

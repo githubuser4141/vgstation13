@@ -629,7 +629,7 @@
 	var/list/new_labels = list()
 	for(var/datum/block_label/lmao2list in src.labels)
 		new_labels += list(list("name" = lmao2list.name, "color" = lmao2list.color)) //Yes, you are reading this right, "list(list())"[sic]. If you're a sane person you're probably wondering what the fuck this is.
-		//You know those weird, creepy twins that only speak between themselves in a made-up language that nobody else understands? NanoUI is it's OWN retarded twin.
+		//You know those weird, creepy twins that only speak between themselves in a made-up language that nobody else understands? NanoUI is it's OWN sillyed twin.
 	data["block_labels"] = new_labels
 
 	var/occupantData[0]

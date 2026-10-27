@@ -562,7 +562,7 @@
 
 /datum/disease2/effect/wizarditis
 	name = "Wizarditis"
-	desc = "Subjects affected show the signs of mental retardation, yelling obscure sentences or total gibberish."
+	desc = "Subjects affected show the signs of mental sillyation, yelling obscure sentences or total gibberish."
 	encyclopedia = "Some may express the feelings of inner power, and, cite, 'the ability to control the forces of cosmos themselves!'. This led to speculations that this symptom is the cause of Wizard Federation's existance."
 	stage = 4
 	badness = EFFECT_DANGER_HARMFUL

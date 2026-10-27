@@ -83,7 +83,7 @@ var/global/list/thing_storm_types = list(
 	),
 	"sausage party" = list(
 		/obj/item/weapon/reagent_containers/food/snacks/sausage,
-		/obj/item/weapon/reagent_containers/food/snacks/faggot,
+		/obj/item/weapon/reagent_containers/food/snacks/sausage,
 	),
 	"blob shower" = list(
 		/obj/item/projectile/meteor/blob,

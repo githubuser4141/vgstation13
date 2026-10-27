@@ -2972,7 +2972,7 @@
 #include "code\modules\spells\targeted\punch.dm"
 #include "code\modules\spells\targeted\push.dm"
 #include "code\modules\spells\targeted\recall.dm"
-#include "code\modules\spells\targeted\retard.dm"
+#include "code\modules\spells\targeted\silly.dm"
 #include "code\modules\spells\targeted\shoesnatch.dm"
 #include "code\modules\spells\targeted\street_alchemy.dm"
 #include "code\modules\spells\targeted\summon_snacks.dm"

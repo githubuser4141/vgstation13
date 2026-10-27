@@ -334,7 +334,7 @@
 /proc/derpspeech(message, stuttering)
 //specific words we want replaced every time, mainly references to the actual brain damage lines, so they stay consistent with brain damage regular speech
 	message = replacetext(message, "stop", "sotp")
-	message = replacetext(message, "retarded", "rarted")
+	message = replacetext(message, "sillyed", "rarted")
 	message = replacetext(message, "george", "[pick("joerge", "george", "gorge", "gdoruge")]")
 	message = replacetext(message, "melon", "[pick("mellens", "melons", "mwrlins")]")
 	message = replacetext(message, "oxygen", "oxigen")

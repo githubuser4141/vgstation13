@@ -76,7 +76,7 @@ var/admin_time_offset = 0
 /proc/time_stamp()
 	return time2text(world.timeofday, "hh:mm:ss")
 
-/* Preserving this so future generations can see how fucking retarded some people are
+/* Preserving this so future generations can see how fucking sillyed some people are
 //proc/time_stamp()
 	var/hh = text2num(time2text(world.timeofday, "hh")) // Set the hour
 	var/mm = text2num(time2text(world.timeofday, "mm")) // Set the minute

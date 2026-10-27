@@ -21535,7 +21535,7 @@
 /obj/structure/lattice,
 /turf/space,
 /area)
-"fag" = (
+"sausag" = (
 /obj/machinery/atmospherics/pipe/simple/scrubbers/hidden{
 	dir = 4
 	},
@@ -21617,7 +21617,7 @@
 	},
 /turf/space,
 /area)
-"faG" = (
+"sausag" = (
 /obj/structure/window/reinforced{
 	dir = 8
 	},
@@ -198521,7 +198521,7 @@ oAi
 cYn
 vND
 dsi
-fag
+sausag
 rAb
 syB
 dDo
@@ -214085,7 +214085,7 @@ rtG
 cFY
 kxF
 eYD
-faG
+sausag
 fdX
 dIN
 dIN

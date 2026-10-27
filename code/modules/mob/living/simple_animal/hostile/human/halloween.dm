@@ -67,8 +67,8 @@
 	rapid = 1
 	retreat_distance = 5
 	corpse = null
-	projectiletype = /obj/item/projectile/bullet/faggot
-	ranged_message = "flings a faggot"
+	projectiletype = /obj/item/projectile/bullet/sausage
+	ranged_message = "flings a sausage"
 
 
 /mob/living/simple_animal/hostile/humanoid/kitchen/meatballer/Shoot(var/atom/target, var/atom/start, var/mob/user, var/bullet = 0)
@@ -85,7 +85,7 @@
 
 /mob/living/simple_animal/hostile/humanoid/kitchen/meatballer/proc/fire_everything()
 	set waitfor = 0
-	visible_message("<span class = 'warning'>\The [src] starts madly flinging faggots in all directions!</span>")
+	visible_message("<span class = 'warning'>\The [src] starts madly flinging sausages in all directions!</span>")
 	var/volleys = rand(2,5)
 	friendly_fire = 1
 	canmove = 0
@@ -106,8 +106,8 @@
 							/obj/item/weapon/reagent_containers/food/snacks/copypasta)
 		new to_spawn (src.loc)
 
-	new /obj/item/weapon/reagent_containers/food/snacks/faggot(src.loc)
-	visible_message("<span class='warning'>\The [src] falls apart, revealing a solitary faggot among the remains.</span>")
+	new /obj/item/weapon/reagent_containers/food/snacks/sausage(src.loc)
+	visible_message("<span class='warning'>\The [src] falls apart, revealing a solitary sausage among the remains.</span>")
 	qdel (src)
 
 /*

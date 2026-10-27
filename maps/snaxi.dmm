@@ -90114,7 +90114,7 @@
 	})
 "yki" = (
 /obj/structure/sign/kiddieplaque{
-	desc = "Next to the description of how to configure an antimatter engine, there is a drawing of a little child. The child appears to be retarded. Beneath the image, someone has scratched the word \"TRAPPED SEND HELP\".";
+	desc = "Next to the description of how to configure an antimatter engine, there is a drawing of a little child. The child appears to be sillyed. Beneath the image, someone has scratched the word \"TRAPPED SEND HELP\".";
 	name = "antimatter engineer's plaque";
 	pixel_y = -30
 	},

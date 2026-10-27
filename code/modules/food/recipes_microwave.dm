@@ -610,7 +610,7 @@
 
 /datum/recipe/donkpocket
 	reagents = list(FLOUR = 5)
-	items = list(/obj/item/weapon/reagent_containers/food/snacks/faggot)
+	items = list(/obj/item/weapon/reagent_containers/food/snacks/sausage)
 	result = /obj/item/weapon/reagent_containers/food/snacks/donkpocket //SPECIAL
 
 /datum/recipe/donkpocket/make_food(var/obj/container, var/mob/user)
@@ -982,7 +982,7 @@
 /datum/recipe/meatbun
 	reagents = list(SOYSAUCE = 5, FLOUR = 5)
 	items = list(
-		/obj/item/weapon/reagent_containers/food/snacks/faggot,
+		/obj/item/weapon/reagent_containers/food/snacks/sausage,
 		/obj/item/weapon/reagent_containers/food/snacks/grown/cabbage,
 		)
 	result = /obj/item/weapon/reagent_containers/food/snacks/meatbun
@@ -1455,7 +1455,7 @@
 /datum/recipe/meatballsoup
 	reagents = list(WATER = 10)
 	items = list(
-		/obj/item/weapon/reagent_containers/food/snacks/faggot ,
+		/obj/item/weapon/reagent_containers/food/snacks/sausage ,
 		/obj/item/weapon/reagent_containers/food/snacks/grown/carrot,
 		/obj/item/weapon/reagent_containers/food/snacks/grown/potato,
 		)
@@ -1666,7 +1666,7 @@
 	reagents = list(SACIDS = 10)
 	items = list(
 		/obj/item/weapon/reagent_containers/food/snacks/spaghetti,
-		/obj/item/weapon/reagent_containers/food/snacks/faggot,
+		/obj/item/weapon/reagent_containers/food/snacks/sausage,
 		)
 	result = /obj/item/weapon/reagent_containers/food/snacks/blethernoodlesoup/wrapped
 
@@ -1832,8 +1832,8 @@
 	reagents = list(WATER = 5)
 	items = list(
 		/obj/item/weapon/reagent_containers/food/snacks/spaghetti,
-		/obj/item/weapon/reagent_containers/food/snacks/faggot,
-		/obj/item/weapon/reagent_containers/food/snacks/faggot,
+		/obj/item/weapon/reagent_containers/food/snacks/sausage,
+		/obj/item/weapon/reagent_containers/food/snacks/sausage,
 		)
 	result = /obj/item/weapon/reagent_containers/food/snacks/meatballspaghetti
 
@@ -1850,10 +1850,10 @@
 	reagents = list(WATER = 5)
 	items = list(
 		/obj/item/weapon/reagent_containers/food/snacks/spaghetti,
-		/obj/item/weapon/reagent_containers/food/snacks/faggot,
-		/obj/item/weapon/reagent_containers/food/snacks/faggot,
-		/obj/item/weapon/reagent_containers/food/snacks/faggot,
-		/obj/item/weapon/reagent_containers/food/snacks/faggot,
+		/obj/item/weapon/reagent_containers/food/snacks/sausage,
+		/obj/item/weapon/reagent_containers/food/snacks/sausage,
+		/obj/item/weapon/reagent_containers/food/snacks/sausage,
+		/obj/item/weapon/reagent_containers/food/snacks/sausage,
 		)
 	result = /obj/item/weapon/reagent_containers/food/snacks/spesslaw
 
@@ -1900,7 +1900,7 @@
 		/obj/item/weapon/reagent_containers/food/snacks/grown/ambrosiavulgaris,
 		/obj/item/weapon/reagent_containers/food/snacks/grown/ambrosiavulgaris,
 		/obj/item/weapon/reagent_containers/food/snacks/grown/potato,
-		/obj/item/weapon/reagent_containers/food/snacks/faggot,
+		/obj/item/weapon/reagent_containers/food/snacks/sausage,
 		)
 	result = /obj/item/weapon/reagent_containers/food/snacks/validsalad
 
@@ -2397,7 +2397,7 @@
 
 /datum/recipe/sausage
 	items = list(
-		/obj/item/weapon/reagent_containers/food/snacks/faggot,
+		/obj/item/weapon/reagent_containers/food/snacks/sausage,
 		/obj/item/weapon/reagent_containers/food/snacks/meat,
 		)
 	result = /obj/item/weapon/reagent_containers/food/snacks/sausage

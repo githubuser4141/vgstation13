@@ -412,16 +412,16 @@
 			else
 				//more than 0 human escapees
 				var/braindamage_total = 0
-				var/all_retarded = TRUE
+				var/all_sillyed = TRUE
 				for(var/mob/living/carbon/human/H in human_escapees)
 					if(H.brainloss < 60)
-						all_retarded = FALSE
+						all_sillyed = FALSE
 					braindamage_total += H.brainloss
 				var/average_braindamage = braindamage_total / human_escapees.len
 				if(average_braindamage > 30)
 					episode_names += new /datum/episode_name/rare("[pick("THE CREW'S SMALL IQ PROBLEM", "OW! MY BALLS", "BR[pick("AI", "IA")]N DAM[pick("AGE", "GE", "AG")]", "THE VERY SPECIAL CREW OF [uppr_name]")]", "Average of [average_braindamage] brain damage for each human shuttle escapee.", min(1000, average_braindamage*10))
-				if(all_retarded && human_escapees.len > 2)
-					episode_names += new /datum/episode_name/rare("...AND PRAY THERE'S INTELLIGENT LIFE SOMEWHERE OUT IN SPACE, 'CAUSE THERE'S BUGGER ALL DOWN HERE IN [uppr_name]", "Everyone was retarded this round.", human_escapees.len * 500)
+				if(all_sillyed && human_escapees.len > 2)
+					episode_names += new /datum/episode_name/rare("...AND PRAY THERE'S INTELLIGENT LIFE SOMEWHERE OUT IN SPACE, 'CAUSE THERE'S BUGGER ALL DOWN HERE IN [uppr_name]", "Everyone was sillyed this round.", human_escapees.len * 500)
 
 			var/bearcount = 0
 			for(var/mob/living/simple_animal/hostile/bear/B in shuttle)
