@@ -76,7 +76,7 @@
 		else
 			..()
 	else if(istype(W,/obj/item/weapon/pen))
-		plaque_contents = copytext(sanitize(input(user, "What would you like to write on the plaque?", "Skeleton plaque", null) as text|null), 1, 1648) //length of WGW in characters - niggly said i should
+		plaque_contents = copytext(sanitize(input(user, "What would you like to write on the plaque?", "Skeleton plaque", null) as text|null), 1, 1648) //length of WGW in characters - bob said i should
 		if (!plaque_contents || !Adjacent(user) || user.stat)
 			return
 		user.visible_message("[user] writes something on the base of [src].","You relabel the plaque on the base of [bicon(src)] [src].")

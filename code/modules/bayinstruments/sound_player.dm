@@ -22,7 +22,7 @@
 
 	/*
 	This needs an explanation.
-	This is beyond dumb, this is fucking retarded.
+	This is beyond dumb, this is fucking sillyed.
 	Basically when you send a sound with a non-minus-one environment to a client, it sets their _global_ environment value to whatever you sent to them
 	So ALL sounds will have this environment setting assigned afterwards.
 	You could sort of hear it if you were standing in a hallway and got a PM or something.

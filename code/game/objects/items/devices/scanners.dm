@@ -218,7 +218,7 @@ Subject's pulse: ??? BPM"})
 	else if(M.getBrainLoss() >= 100 || !M.has_brain())
 		message += "<br><span class='warning'>No brain activity has been detected. Subject is braindead.</span>"
 	else if(M.getBrainLoss() >= 60)
-		message += "<br><span class='warning'>Severe brain damage detected. Potential mental retardation.</span>"
+		message += "<br><span class='warning'>Severe brain damage detected. Potential mental sillyation.</span>"
 	else if(M.getBrainLoss() >= 10)
 		message += "<br><span class='warning'>Significant brain damage detected. Potential Concussion.</span>"
 	if(ishuman(M))

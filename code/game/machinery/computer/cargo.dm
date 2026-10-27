@@ -260,7 +260,7 @@ For vending packs, see vending_packs.dm*/
 		return
 	// data to send to ui
 	var/data[0]
-	// make assoc list for supply groups because either I'm retarded or nanoui is retarded
+	// make assoc list for supply groups because either I'm sillyed or nanoui is sillyed
 	var/supply_group_data[0]
 	for(var/i = 1; i <= all_supply_groups.len; i++)
 		supply_group_data.Add(list(list("category" = all_supply_groups[i])))
@@ -748,7 +748,7 @@ For vending packs, see vending_packs.dm*/
 		return
 	// ui data
 	var/data[0]
-	// make assoc list for supply groups because either I'm retarded or nanoui is retarded
+	// make assoc list for supply groups because either I'm sillyed or nanoui is sillyed
 	var/supply_group_data[0]
 	for(var/i = 1; i <= all_supply_groups.len; i++)
 		supply_group_data.Add(list(list("category" = all_supply_groups[i])))

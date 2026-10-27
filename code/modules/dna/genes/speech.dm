@@ -1,6 +1,6 @@
 #define ACT_REPLACE      /datum/speech_filter_action/replace
 #define ACT_PICK_REPLACE /datum/speech_filter_action/pick_replace
-#define GENERIC_INSULT_WORDS "\\b(asshole|comdom|shitter|shitler|retard|dipshit|dipshit|greyshirt|security|shitcurity)"
+#define GENERIC_INSULT_WORDS "\\b(asshole|comdom|shitter|shitler|silly|dipshit|dipshit|greyshirt|security|shitcurity)"
 
 /datum/speech_filter
 	// REGEX OH BOY
@@ -172,7 +172,7 @@
 	addReplacement("\\b(don't know|dunno)","don't bleedin knaw")
 	addReplacement("\\b(isn't|ain't)\\sit","innit")
 	addPickReplacement("\\b(very|absolutely|completely|utterly|totally)",list("well","right","proper"))
-	addPickReplacement("\\b(retard|dumbass|idiot|moron)",list("spastic","spazzer","mong","bell-end"))
+	addPickReplacement("\\b(silly|dumbass|idiot|moron)",list("spastic","spazzer","mong","bell-end"))
 	addWordReplacement("no","naw")
 	addReplacement("robust","chin")
 	addWordReplacement("hi","how what how")
@@ -202,7 +202,7 @@
 /datum/speech_filter/smile/New()
 //Time for a friendly game of SS13
 	addWordReplacement("stupid","smart")
-	addWordReplacement("retard","genius")
+	addWordReplacement("silly","genius")
 	addWordReplacement("unrobust","robust")
 	addReplacement("dumb","smart")
 	addWordReplacement("awful","great")
@@ -233,7 +233,7 @@
 	addWordReplacement("beer","water with ice")
 	addWordReplacement("drink","water")
 	addWordReplacement("\\b(feminist|feminazi|SJW|social justice warrior)","empowered woman")
-	addPickReplacement("fag", list("fig", "friend"))
+	addPickReplacement("sausag", list("fig", "friend"))
 	addWordReplacement("tranny","felinid")
 	addWordReplacement("trannies","felinids")
 	addReplacement("\\b(shit|crap)","poo")

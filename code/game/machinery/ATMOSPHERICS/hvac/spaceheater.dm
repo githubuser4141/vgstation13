@@ -236,8 +236,8 @@
 			light("<span class='notice'>[user] lights \the [name] with \the [I].</span>")
 		return
 	if(on && istype(I,/obj/item/clothing/mask/cigarette))
-		var/obj/item/clothing/mask/cigarette/fag = I
-		fag.light("<span class='notice'>[user] lights \the [fag] using \the [src]'s flames.</span>")
+		var/obj/item/clothing/mask/cigarette/sausag = I
+		sausag.light("<span class='notice'>[user] lights \the [sausag] using \the [src]'s flames.</span>")
 
 /obj/machinery/space_heater/campfire/proc/light(var/flavourtext = "<span class='notice'>[usr] lights \the [src].</span>")
 	if(on)

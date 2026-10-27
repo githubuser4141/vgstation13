@@ -154,7 +154,7 @@
 			if (PAINT_PLATING)
 				name = "plating"
 
-//This is used to give the user a hint that he's a massive retard for using a floor painter on the carpet
+//This is used to give the user a hint that he's a massive silly for using a floor painter on the carpet
 /datum/paint_info/proc/validate(atom/test)
 	switch (ftype)
 		if (PAINT_FLOOR)

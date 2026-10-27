@@ -272,7 +272,7 @@
 
 /obj/item/weapon/paper/hive/marauder_lost
 	name = "paper- 'HOW THE HELL DID YOU LOSE AN ENTIRE LUEDUOZHE'"
-	info = {"Give me a single reason not to stick all of your retarded asses in the deprotonizer. Lueduozhe 1 is gone and there's a toy in its place. I demand answers.<br>
+	info = {"Give me a single reason not to stick all of your sillyed asses in the deprotonizer. Lueduozhe 1 is gone and there's a toy in its place. I demand answers.<br>
 	<i>Omar</i> <b>ID: 1C/1</b>"}
 
 /obj/item/weapon/paper/hive/marauder_rescue

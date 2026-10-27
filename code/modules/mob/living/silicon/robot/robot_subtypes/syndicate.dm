@@ -1,4 +1,4 @@
-//Syndicate subtype because putting this on new() is fucking retarded.
+//Syndicate subtype because putting this on new() is fucking sillyed.
 //Be sure to update the vars if you ever add even more weird AI link stuff.
 /mob/living/silicon/robot/syndie
 	modtype = "Syndicate"

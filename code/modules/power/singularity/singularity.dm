@@ -797,7 +797,7 @@ var/list/obj/machinery/singularity/white_hole_candidates
 
 /obj/machinery/singularity/deadchat_controlled/Destroy()
 	..()
-	var/message = "<span class='recruit'>The deadchat-played singularity has been destroyed. Good job, retards."
+	var/message = "<span class='recruit'>The deadchat-played singularity has been destroyed. Good job, sillys."
 	deadchat_active=0
 	for(var/mob/M in player_list)
 		if(istype(M, /mob/new_player) || !M.client)

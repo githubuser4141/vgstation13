@@ -472,7 +472,7 @@ var/global/borer_unlock_types_leg = typesof(/datum/unlockable/borer/leg) - /datu
 
 /mob/living/simple_animal/borer/proc/damage_brain()
 	set category = "Alien"
-	set name = "Retard Host"
+	set name = "silly Host"
 	set desc = "Give the host a bit of brain damage.  Can be healed with alkysine."
 
 	if(!check_can_do())

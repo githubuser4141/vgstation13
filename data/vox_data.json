@@ -68647,18 +68647,18 @@
         "rests"
       ]
     },
-    "retard": {
+    "silly": {
       "wordlen": 1,
       "files": {
         "fem": {
-          "filename": "sound/vox_fem/retard.ogg",
+          "filename": "sound/vox_fem/silly.ogg",
           "voice": "us-clb",
           "checksum": "c0f250187b51c5d18faa1585b6748218",
           "duration": 1.176,
           "size": 7103
         },
         "mas": {
-          "filename": "sound/vox_mas/retard.ogg",
+          "filename": "sound/vox_mas/silly.ogg",
           "voice": "us-rms",
           "checksum": "feef74f88d440e0c4ea789606eaac4a7",
           "duration": 1.064,
@@ -68667,21 +68667,21 @@
       },
       "flags": [],
       "phrase": [
-        "retard"
+        "silly"
       ]
     },
-    "retarded": {
+    "sillyed": {
       "wordlen": 1,
       "files": {
         "fem": {
-          "filename": "sound/vox_fem/retarded.ogg",
+          "filename": "sound/vox_fem/sillyed.ogg",
           "voice": "us-clb",
           "checksum": "cde0dbf90fa38b35fb062abdec44b306",
           "duration": 1.256,
           "size": 7432
         },
         "mas": {
-          "filename": "sound/vox_mas/retarded.ogg",
+          "filename": "sound/vox_mas/sillyed.ogg",
           "voice": "us-rms",
           "checksum": "7ffc6fea741d1a1713a4810ea550438c",
           "duration": 1.096,
@@ -68690,21 +68690,21 @@
       },
       "flags": [],
       "phrase": [
-        "retarded"
+        "sillyed"
       ]
     },
-    "retarding": {
+    "sillying": {
       "wordlen": 1,
       "files": {
         "fem": {
-          "filename": "sound/vox_fem/retarding.ogg",
+          "filename": "sound/vox_fem/sillying.ogg",
           "voice": "us-clb",
           "checksum": "52c84691558d7f1a913921ec7d5b3a7f",
           "duration": 1.32,
           "size": 7656
         },
         "mas": {
-          "filename": "sound/vox_mas/retarding.ogg",
+          "filename": "sound/vox_mas/sillying.ogg",
           "voice": "us-rms",
           "checksum": "b6b1b459134549db201d8a6814764cd5",
           "duration": 1.16,
@@ -68713,21 +68713,21 @@
       },
       "flags": [],
       "phrase": [
-        "retarding"
+        "sillying"
       ]
     },
-    "retards": {
+    "sillys": {
       "wordlen": 1,
       "files": {
         "fem": {
-          "filename": "sound/vox_fem/retards.ogg",
+          "filename": "sound/vox_fem/sillys.ogg",
           "voice": "us-clb",
           "checksum": "16977bd8677634ceefe90ed0505b79ee",
           "duration": 1.304,
           "size": 7650
         },
         "mas": {
-          "filename": "sound/vox_mas/retards.ogg",
+          "filename": "sound/vox_mas/sillys.ogg",
           "voice": "us-rms",
           "checksum": "8d7c274c34c85428ad839979333964ee",
           "duration": 1.224,
@@ -68736,7 +68736,7 @@
       },
       "flags": [],
       "phrase": [
-        "retards"
+        "sillys"
       ]
     },
     "retire": {

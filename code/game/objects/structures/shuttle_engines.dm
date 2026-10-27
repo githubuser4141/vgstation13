@@ -148,7 +148,7 @@
 
 // find and rectify black-swan type weirdness, i.e. varedit / singuloo unanchoring the engine parts or a push wizard teleporting them away
 // the shuttle should NOT work if one of the heaters has been magicked halfway across the station, so check for it!
-/obj/structure/shuttle/engine/propulsion/DIY/proc/retard_checks()
+/obj/structure/shuttle/engine/propulsion/DIY/proc/silly_checks()
 	if(!heater) // no point disconnecting if there is no heater
 		return
 	if(!heater.anchored || anchored) // we've somehow gotten unanchored

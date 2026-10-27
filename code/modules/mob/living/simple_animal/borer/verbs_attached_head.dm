@@ -21,7 +21,7 @@
 
 /obj/item/verbs/borer/attached_head/verb/damage_brain()
 	set category = "Alien"
-	set name = "Retard Host"
+	set name = "silly Host"
 	set desc = "Give the host a bit of brain damage.  Can be healed with alkysine."
 
 	var/mob/living/simple_animal/borer/B=loc
