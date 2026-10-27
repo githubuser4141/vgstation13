@@ -1,4 +1,5 @@
 /mob/living
+	var/last_swap_time = 0
 	see_invisible = SEE_INVISIBLE_LIVING
 
 	//Health and life related vars
@@ -49,7 +50,8 @@
 	var/specialsauce = 0 //Has this person consumed enough special sauce? IF so they're a ticking time bomb of death.
 	var/silent = null 		//Can't talk. Value goes down every life proc.
 
-	var/locked_to_z = 0 // Locked to a Z-level if nonzero.
+	var/locked_to_current_v = FALSE // Locked to the current Virtual Z-level. Only use this for mapping.
+	var/datum/virtual_z/locked_to_v = null // Locked to a Virtual Z-level if not null.
 
 	var/list/icon/pipes_shown = list()
 	var/last_played_vent
@@ -83,3 +85,10 @@
 	var/braindamagespeechcooldown = FALSE //used to avoid braindamage proc spamming when checking the like 80 replacements
 
 	var/list/luminosity_sources = list()
+	var/standard_dizzy_reduce = 1
+	var/standard_jitter_reduce = 1
+	var/rested_dizzy_reduce = 5
+	var/rested_jitter_reduce = 5
+
+	var/paused = FALSE
+	var/pacify_aura = FALSE

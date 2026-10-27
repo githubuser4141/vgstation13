@@ -271,7 +271,7 @@
 			M.appearance_flags = RESET_COLOR
 			M.blend_mode = BLEND_ADD
 			if (isturf(loc))
-				M.plane = ABOVE_LIGHTING_PLANE
+				M.plane = ABOVE_LIGHTING_PLANE_ADDITIVE
 			else
 				M.plane = ABOVE_HUD_PLANE // inventory
 			overlays += M
@@ -282,7 +282,7 @@
 			I.blend_mode = BLEND_ADD
 			I.pixel_y = candle_offset_y
 			if (isturf(loc))
-				I.plane = ABOVE_LIGHTING_PLANE
+				I.plane = ABOVE_LIGHTING_PLANE_ADDITIVE
 			else
 				I.plane = ABOVE_HUD_PLANE // inventory
 			overlays += I
@@ -941,16 +941,23 @@
 
 	var/NM = time2text(world.realtime,"Month")
 	var/cookiecutter
+	var/holiday = Get_Holiday()
 
-	switch(NM)
-		if("February")
-			cookiecutter = pick( list("heart","jamheart","frostingheartpink","frostingheartwhite","frostingheartred") )
-		if("December")
-			cookiecutter = pick( list("stocking","tree","snowman","mitt","angel","deer") )
-		if("October")
-			cookiecutter = pick( list("spider","cat","pumpkin","bat","ghost","hat","frank") )
-		else
-			cookiecutter = pick( list("spider","cat","pumpkin","bat","ghost","hat","frank","stocking","tree","snowman","mitt","angel","deer","heart","jamheart","frostingheartpink","frostingheartwhite","frostingheartred") )
+	if(holiday)
+		switch(holiday)
+			if (SINTERKLAAS)
+				cookiecutter = pick( list("mijter","sinterklaas","piet","kadotje","schoentje") )
+
+	if(!cookiecutter)
+		switch(NM)
+			if("February")
+				cookiecutter = pick( list("heart","jamheart","frostingheartpink","frostingheartwhite","frostingheartred") )
+			if("December")
+				cookiecutter = pick( list("stocking","tree","snowman","mitt","angel","deer") )
+			if("October")
+				cookiecutter = pick( list("spider","cat","pumpkin","bat","ghost","hat","frank") )
+			else
+				cookiecutter = pick( list("spider","cat","pumpkin","bat","ghost","hat","frank","stocking","tree","snowman","mitt","angel","deer","heart","jamheart","frostingheartpink","frostingheartwhite","frostingheartred","mijter","sinterklaas","piet","kadotje","schoentje") )
 	icon_state = "[cookiecutter]"
 
 /obj/item/weapon/reagent_containers/food/snacks/multispawner/candyheart
@@ -1002,6 +1009,65 @@
 	reagents.add_reagent(NUTRIMENT, 3)
 	reagents.add_reagent(SUGAR, 4)
 	bitesize = 2
+
+/obj/item/weapon/reagent_containers/food/snacks/multispawner/taaitaai
+	name = "taaitaai mannetjes"
+	child_type = /obj/item/weapon/reagent_containers/food/snacks/taaitaai
+
+/obj/item/weapon/reagent_containers/food/snacks/multispawner/taaitaai/New()
+	..()
+	reagents.add_reagent(NUTRIMENT, 5)
+	reagents.add_reagent(CINNAMON, 5)
+	reagents.add_reagent(FLOUR, 5)
+
+/obj/item/weapon/reagent_containers/food/snacks/taaitaai //sinterklaas
+	name = "taaitaai mannetje"
+	desc = "Spicy, chewy and sweet little cookies, vaguely shaped like a person."
+	icon = 'icons/obj/food_seasonal.dmi'
+	icon_state = "taaitaai_1"
+	bitesize = 3
+
+/obj/item/weapon/reagent_containers/food/snacks/taaitaai/New()
+	..()
+	reagents.add_reagent(NUTRIMENT, 1)
+	reagents.add_reagent(CINNAMON, 2)
+	var/taai = pick(list("taaitaai_1","taaitaai_2","taaitaai_3"))
+	icon_state = "[taai]"
+
+/obj/item/weapon/reagent_containers/food/snacks/kruidnoten
+	name = "handful of kruidnoten"
+	desc = "Tiny hard spiced cookies, perfect for throwing at people!"
+	icon = 'icons/obj/food_seasonal.dmi'
+	icon_state = "kruidnoten"
+	wrapped = 0
+	bitesize = 3
+	throwforce = 3
+	throw_speed = 3
+
+/obj/item/weapon/reagent_containers/food/snacks/kruidnoten/New()
+	..()
+	reagents.add_reagent(NUTRIMENT, 1)
+	reagents.add_reagent(CINNAMON, 2)
+
+/obj/item/weapon/reagent_containers/food/snacks/chocoladeletter
+	name = "chocolate letter"
+	desc = "A large letter made out of chocolate. Traditionally given to someone whose first name starts with the same letter."
+	icon = 'icons/obj/food_seasonal.dmi'
+	icon_state = "chocoladeletter"
+	food_flags = FOOD_SWEET
+	harmfultocorgis = TRUE
+	var/letterletter = "S"
+
+/obj/item/weapon/reagent_containers/food/snacks/chocoladeletter/New(loc,var/letterfood = letterletter)
+	..()
+	var/list/lettermaker = list("letter_message" = letterfood,
+								"letter_color" = "#35220d",
+								"letter_size" = "12",
+								"font_name" = "Times New Roman")
+	maptext = "<span style=\"color:[lettermaker["letter_color"]];font-size:[lettermaker["letter_size"]]px;font-family:'[lettermaker["font_name"]]'\">[lettermaker["letter_message"]]</span>"
+	maptext_x = 8
+	maptext_y = 8
+	reagents.add_reagent(COCO, 1)
 
 /obj/item/weapon/reagent_containers/food/snacks/chocolatebar
 	name = "chocolate bar"
@@ -1776,6 +1842,20 @@
 	reagents.add_reagent(NUTRIMENT, 8)
 	bitesize = 2
 
+
+/obj/item/weapon/reagent_containers/food/snacks/dinonuggies
+	name = "Dinosaur Nugget"
+	desc = "A true delicacy worth at least 25 good boy points."
+	icon_state = "dinonuggies"
+	food_flags = FOOD_MEAT
+	base_crumb_chance = 20
+
+/obj/item/weapon/reagent_containers/food/snacks/dinonuggies/New()
+	..()
+	reagents.add_reagent(NUTRIMENT, 6)
+	reagents.add_reagent(GRUGZONE, 2)
+	bitesize = 2
+
 /obj/item/weapon/reagent_containers/food/snacks/blobburger
 	name = "bloburger"
 	desc = "Careful, has a tendency to spill sauce in every direction when squeezed too hard."
@@ -1905,8 +1985,8 @@
 	set waitfor = FALSE
 	if(..())
 		return
-	if(ismob(hit_atom))
-		var/mob/M = hit_atom
+	if(isliving(hit_atom))
+		var/mob/living/M = hit_atom
 		src.visible_message("<span class='warning'>\The [src] splats in [M]'s face!</span>")
 
 		var/race_prefix = ""
@@ -1917,12 +1997,16 @@
 		else if (isinsectoid(M))
 			race_prefix = "insect"
 
-		M.eye_blind = 2
+		M.instant_blindness(12)
+
+		M.overlay_fullscreen("blurry", /obj/abstract/screen/fullscreen/blurry)//cumvision
+
 		M.overlays += image('icons/mob/messiness.dmi',icon_state = "[race_prefix]pied")
 		sleep(55)
 		M.overlays -= image('icons/mob/messiness.dmi',icon_state = "[race_prefix]pied")
 		M.overlays += image('icons/mob/messiness.dmi',icon_state = "[race_prefix]pied-2")
 		sleep(120)
+		M.clear_fullscreen("blurry")
 		M.overlays -= image('icons/mob/messiness.dmi',icon_state = "[race_prefix]pied-2")
 
 		if(luckiness)
@@ -4333,6 +4417,8 @@
 	icon_state = "watermelonslice"
 	bitesize = 2
 	food_flags = FOOD_SWEET
+	inhand_states = list("left_hand" = 'icons/mob/in-hand/left/fruits.dmi', "right_hand" = 'icons/mob/in-hand/right/fruits.dmi')
+	item_state = "watermelonslice"
 
 /obj/item/weapon/reagent_containers/food/snacks/sliceable/applecake
 	name = "apple cake"
@@ -6374,6 +6460,18 @@
 	reagents.add_reagent(IRON, 5)
 	bitesize = 2
 
+/obj/item/weapon/reagent_containers/food/snacks/vreemdkoekje
+	name = "Vreemdkoekje"
+	desc = "Bevat nog steeds geen ijzer."
+	icon_state = "vreemdkoekje"
+	food_flags = FOOD_DIPPABLE
+
+/obj/item/weapon/reagent_containers/food/snacks/vreemdkoekje/New()
+	..()
+	reagents.add_reagent(NUTRIMENT, 5)
+	reagents.add_reagent(ZETADUST, 5)
+	bitesize = 2
+
 /obj/item/weapon/reagent_containers/food/snacks/pie/nofruitpie
 	name = "no-fruit pie"
 	desc = "It doesn't really taste like anything."
@@ -8188,6 +8286,17 @@ var/global/list/bomb_like_items = list(/obj/item/device/transfer_valve, /obj/ite
 	reagents.add_reagent (SUGAR, 6)
 	bitesize = 2
 
+/obj/item/weapon/reagent_containers/food/snacks/sosigroll
+	name = "sosig roll"
+	desc = "A sausage wrapped in flaky golden pastry. Not affiliated with Gruggs."
+	icon_state = "sosigroll"
+	food_flags = FOOD_MEAT
+
+/obj/item/weapon/reagent_containers/food/snacks/sosigroll/New()
+	..()
+	reagents.add_reagent (NUTRIMENT, 3)
+	bitesize = 3
+
 /obj/item/weapon/reagent_containers/food/snacks/dorfbiscuit
 	name = "special plump helmet biscuit"
 	desc = "This is a finely-prepared plump helmet biscuit. Aside from the usual ingredients of minced plump helmet and well-minced dwarven wheat flour, this particular serving includes a chemical that sticks whoever eats it to the floor, much like magboots."
@@ -8808,6 +8917,32 @@ var/global/list/bomb_like_items = list(/obj/item/device/transfer_valve, /obj/ite
 		desc = "I have tasted upon all the universe has to hold of gunk, and even the ambrosias and blingpizzas must ever afterward be poison to me."
 	bitesize = 10
 
+/obj/item/weapon/reagent_containers/food/snacks/skitter/gunkslider
+	name = "gunk slider"
+	desc = "Extremely numerous and weirdly unsatisfying."
+	icon_state = "gunkslider"
+	food_flags = FOOD_MEAT
+	bitesize = 2
+	skitterchance = 75
+	skitterdelay = 20 //Opposite to the super gunk burger, this one wakes up fast and moves a lot
+	base_crumb_chance = 20
+
+/obj/item/weapon/reagent_containers/food/snacks/skitter/gunkslider/New()
+	..()
+	if(prob(30))
+		reagents.add_reagent(SALTWATER, 1)
+		desc = "Horrors beyond your comprehension to-go!."
+
+/obj/item/weapon/reagent_containers/food/snacks/multispawner/slider/gunk
+	name = "gunk sliders"
+	child_type = /obj/item/weapon/reagent_containers/food/snacks/skitter/gunkslider
+	child_volume = 2
+
+/obj/item/weapon/reagent_containers/food/snacks/multispawner/slider/gunk/New()
+	..()
+	reagents.add_reagent(ROACHSHELL, 10)
+	reagents.add_reagent(NUTRIMENT, 10)	//spawns 10
+
 /obj/item/weapon/reagent_containers/food/snacks/gunkkabob
 	name = "Gunk-kabob"
 	icon_state = "bugkabob"
@@ -8997,6 +9132,10 @@ var/global/list/bomb_like_items = list(/obj/item/device/transfer_valve, /obj/ite
 	..()
 	reagents.add_reagent(NUTRIMENT, 5)
 	reagents.add_reagent(ROACHSHELL, 1)
+
+//////////////////////////////////
+// YE HAVE LEFT THE GUNK ZONE ///
+////////////////////////////////
 
 /obj/item/weapon/reagent_containers/food/snacks/multispawner/saltcube
 	name = "salt cubes"

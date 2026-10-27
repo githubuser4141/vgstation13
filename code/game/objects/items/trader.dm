@@ -14,6 +14,7 @@
 	areaname = "mecha graveyard"
 
 /datum/map_element/dungeon/mecha_graveyard
+	name = "Mecha Graveyard"
 	file_path = "maps/randomvaults/dungeons/mecha_graveyard.dmm"
 	unique = TRUE
 
@@ -80,6 +81,18 @@
 		if(4)
 			add_salvagable_equipment(new /obj/item/mecha_parts/mecha_equipment/tool/collector,100)
 
+/obj/effect/decal/mecha_wreckage/roswell/graveyard/New()
+	..()
+	var/list/parts = list(		/obj/item/weapon/circuitboard/mecha/roswell/peripherals,
+								/obj/item/weapon/circuitboard/mecha/roswell/main,
+								/obj/item/weapon/stock_parts/ayy/abductor,
+								/obj/item/weapon/stock_parts/ayy/gravitator,
+								/obj/item/weapon/stock_parts/ayy/scrambler,
+								/obj/item/weapon/stock_parts/ayy/prober)
+	welder_salvage += parts
+
+	add_salvagable_equipment(new /obj/item/mecha_parts/mecha_equipment/tool/ayy/abductor,100)
+	add_salvagable_equipment(new /obj/item/mecha_parts/mecha_equipment/tool/ayy/prober,100)
 
 /mob/living/simple_animal/hostile/asteroid/basilisk/skullbot
 	name = "Mysterious skullbot"
@@ -200,7 +213,7 @@
 /obj/structure/wetdryvac/MouseDropFrom(var/obj/O, src_location, var/turf/over_location, src_control, over_control, params)
 	if(!can_use(usr,O))
 		return
-	if(istype(O,/obj/structure/sink))
+	if(istype(O,/obj/structure/wc/sink))
 		if(!reagents.total_volume)
 			to_chat(usr,"<span class='warning'>\The [src] wet tank is already empty!</span>")
 			return
@@ -249,12 +262,6 @@
 		else if(P.wet == TURF_WET_WATER)
 			reagents.add_reagent(WATER,1)
 		qdel(P)
-	for(var/obj/effect/ash/A in T)
-		if(reagents.is_full())
-			visible_message(span_warning("\The [src] sputters, wet tank full!"))
-			break
-		reagents.add_reagent(CARBON,1)
-		qdel(A)
 	T.clean_blood()
 	for(var/obj/item/trash/R in T)
 		if(trash.len >= max_trash)
@@ -300,7 +307,7 @@
 	if(loc != myvac)
 		retract()
 
-/obj/item/vachandle/throw_at()
+/obj/item/vachandle/throw_at(atom/target, range, speed, override = TRUE, fly_speed = 0, list/whitelist, superthrow = FALSE)
 	retract()
 
 /obj/item/vachandle/proc/mob_moved(atom/movable/mover)

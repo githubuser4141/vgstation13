@@ -258,6 +258,8 @@ Works together with spawning an observer, noted above.
 	if(key && !(copytext(key,1,2)=="@"))
 		if((src && src.client && src.client.holder))
 			log_admin("[key_name(src)] is now a[src.client.holder ? "n admin-" : " "]ghost.")
+			// Clear weather sounds when ghosting
+			client << sound(null, repeat = 0, wait = 0, channel = CHANNEL_WEATHER, volume = 0)
 		var/ghostype = /mob/dead/observer
 		if (deafmute)
 			ghostype = /mob/dead/observer/deafmute
@@ -295,6 +297,11 @@ This is the proc mobs get to turn into a ghost. Forked from ghostize due to comp
 			if ("Shade")
 				if (!iscultist(src))
 					return
+
+				if((timeofdeath != 0) && (timeofdeath < (world.time - DEATH_SHADEOUT_TIMER)))
+					to_chat(src, "<span class='danger'>You took too long. Your powers have dissipated.</span>")
+					return
+
 				if (occult_muted())
 					to_chat(src, "<span class='danger'>Holy interference within your body prevents you from separating your shade from your body.</span>")
 				else
@@ -322,7 +329,8 @@ This is the proc mobs get to turn into a ghost. Forked from ghostize due to comp
 		var/response = alert(src, "Are you -sure- you want to ghost?\n(You are alive. If you ghost, you will not be able to re-enter your current body!  You can't change your mind so choose wisely!)","Are you sure you want to ghost?","Ghost","Stay in body")
 		if(response != "Ghost")
 			return	//didn't want to ghost after-all
-		resting = 1
+		if(!resting)
+			rest_action()
 		if(client && key)
 			var/mob/dead/observer/ghost = ghostize(0)						//0 parameter is so we can never re-enter our body, "Charlie, you can never come baaaack~" :3
 			ghost.timeofdeath = world.time // Because the living mob won't have a time of death and we want the respawn timer to work properly.

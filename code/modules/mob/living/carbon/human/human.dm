@@ -800,10 +800,13 @@
 			else
 				var/skip_message = 0
 
-				var/obj/structure/toilet/T = locate(/obj/structure/toilet) in location //Look for a toilet
+				var/obj/structure/wc/toilet/T = locate(/obj/structure/wc/toilet) in location //Look for a toilet
 				if(T && T.open)
 					src.visible_message("<span class='warning'>[src] throws up into \the [T]!</span>", "<span class='danger'>You throw up into \the [T]!</span>")
 					skip_message = 1
+					var/datum/reagents/temp = new/datum/reagents(100)
+					reagents?.trans_removable_to(temp, vomitvolume, 1)
+					qdel(temp)
 				else //Look for a bucket
 
 					for(var/obj/item/weapon/reagent_containers/glass/G in (location.contents + src.get_active_hand() + src.get_inactive_hand()))
@@ -816,8 +819,7 @@
 
 						if(G.reagents.total_volume <= G.reagents.maximum_volume-7) //Container can fit 7 more units of chemicals - vomit into it
 							G.reagents.add_reagent(VOMIT, rand(3,10))
-							if(src.reagents)
-								reagents.trans_to(G, 1 + reagents.total_volume * vomitvolume) //one tenth
+							reagents?.trans_removable_to(G, vomitvolume, 1)
 						else //Container is nearly full - fill it to the brim with vomit and spawn some more on the floor
 							G.reagents.add_reagent(VOMIT, 10)
 							spawn_vomit_on_floor = 1
@@ -936,6 +938,9 @@
 			decapitated = null
 
 			qdel(B)
+	else
+		for(var/damage in BBrain.specific_damages)
+			BBrain.specific_damages[damage] = 0
 
 	for(var/datum/organ/internal/I in internal_organs)
 		I.damage = 0
@@ -1147,6 +1152,7 @@
 	if(prob(10)) //I'M SO ANEMIC I COULD JUST -DIE-.
 		var/datum/wound/internal_bleeding/I = new (15)
 		affected.wounds += I
+		affected.internally_bleeding = TRUE
 		custom_pain("Something tears wetly in your [affected] as [selection] is pulled free!", 1)
 	return 1
 
@@ -1778,7 +1784,7 @@ var/datum/record_organ //This is just a dummy proc, not storing any variables he
 		var/obj/item/clothing/gloves/G = gloves
 		if(!G.dexterity_check())//some gloves might make it harder to interact with complex technologies, or fit your index in a gun's trigger
 			return FALSE
-	if(getBrainLoss() >= 60)
+	if(getBrainLoss(INTELLIGENCE_L) >= 60)
 		if(!(reagents.has_reagent(METHYLIN) ||  is_dexterous))//methylin and the is_dextrous var supercede brain damage, but not uncomfortable gloves
 			return FALSE
 	return TRUE//humans are dexterous enough by default
@@ -2172,7 +2178,7 @@ var/datum/record_organ //This is just a dummy proc, not storing any variables he
 	else return image(icon = 'icons/mob/attackanims.dmi', icon_state = "default")
 
 /mob/living/carbon/human/proc/initialize_barebones_NPC_components()	//doesn't actually do anything, but contains tools needed for other types to do things
-	add_component(/datum/component/controller/movement/astar)
+	add_component(/datum/component/controller/movement/pathed)
 
 /mob/living/carbon/human/proc/initialize_basic_NPC_components()	//will wander around
 	initialize_barebones_NPC_components()
@@ -2246,7 +2252,7 @@ var/datum/record_organ //This is just a dummy proc, not storing any variables he
 	if (istype(gloves, /obj/item/clothing/gloves/hunter))
 		for(var/obj/item/I in held_items)
 			if (istype(I, /obj/item/weapon/gun/hookshot/whip))
-				to_chat(src, "<span class='notice'>You hold your grip onto your [I]</span>")
+				to_chat(src, "<span class='notice'>You hold your grip onto your [I.name]</span>")
 			else
 				drop_item(I, Target, force_drop = force_drop)
 	else
@@ -2624,3 +2630,31 @@ var/datum/record_organ //This is just a dummy proc, not storing any variables he
 			return list(
 
 		*/
+
+/mob/living/carbon/human/beartrap_act(var/obj/item/weapon/beartrap/trap)
+	trap.trappedorgan = pick_usable_organ(LIMB_LEFT_LEG, LIMB_RIGHT_LEG)
+	if(!trap.trappedorgan)//no leg to snap to
+		return FALSE
+	trap.trapped = 1
+	trap.trappeduser = src
+	trap.armed = 0
+
+	playsound(trap, 'sound/effects/snap.ogg', 60, 1)
+	audible_scream()
+	trap.lock_atom(src, /datum/locking_category/beartrap)
+	register_event(/event/moved, trap, nameof(trap::forcefully_remove()))
+
+	if(trap.trappedorgan.take_damage(15, 0, 25, SERRATED_BLADE & SHARP_BLADE))
+		UpdateDamageIcon()
+		updatehealth()
+
+	if(!pick_usable_organ(trap.trappedorgan)) //check if they lost their leg, and get them out of the trap
+		to_chat(src, "<span class='warning'>With your leg missing, you slip out of the bear trap!</span>")
+		trap.trapped = 0
+		trap.trappeduser.unregister_event(/event/moved, trap, nameof(trap::forcefully_remove()))
+		trap.trappeduser = null
+		trap.unlock_atom(src)
+		trap.anchored = FALSE
+
+	update_canmove()
+	return TRUE

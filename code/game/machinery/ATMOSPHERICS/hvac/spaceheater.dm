@@ -65,6 +65,7 @@
 	flags = null
 	machine_flags = null
 	is_cooktop = TRUE
+	w_type = RECYK_WOOD
 	var/lastcharge = null
 
 /obj/machinery/space_heater/campfire/stove
@@ -76,6 +77,7 @@
 	nocell = 2
 	machine_flags = WRENCHMOVE
 	is_cooktop = FALSE
+	w_type = NOT_RECYCLABLE
 
 /obj/machinery/space_heater/New()
 
@@ -113,6 +115,12 @@
 		light_r = light_range_on+Floor(fireintensity/2)
 		light_p = light_power_on+0.2*fireintensity
 		set_temperature = 15 + 5*fireintensity
+
+		var/image/I = image('icons/lighting/moody_lights.dmi',src,"overlay_[icon_state]")
+		I.appearance_flags = RESET_COLOR
+		I.blend_mode = BLEND_ADD
+		I.plane = LIGHTING_PLANE
+		overlays += I
 	else icon_state = "[base_state][on]"
 	set_light(on ? light_r : 0, light_p)
 	render_cookvessel()
@@ -238,6 +246,10 @@
 	T.visible_message(flavourtext)
 	on = 1
 	update_icon()
+	add_particles(PS_CANDLE)
+	add_particles(PS_CANDLE2)
+	for (var/atom/movable/overlay/animation in T)
+		qdel(animation)//embers
 
 /obj/machinery/space_heater/togglePanelOpen(var/obj/toggleitem, mob/user)
 	..()
@@ -372,10 +384,7 @@
 			 	for (var/mob/living/carbon/M in view(src,light_range_on))
 			 		M.bodytemperature += 0.01 * set_temperature * 1/((get_dist(src,M)+1)) // this is a temporary algorithm until we fix life to not have body temperature change so willy-nilly.
 		else
-			on = 0
-			update_icon()
-
-	return
+			putOutFire()
 
 /obj/machinery/space_heater/campfire/process()
 	..()
@@ -392,19 +401,39 @@
 	if(on)
 		playsound(src, pick(comfyfire), (cell.charge/250)*5, 1, -1,channel = 124)
 
-/obj/machinery/space_heater/campfire/proc/putOutFire()
+	if(!can_cook())
+		return
+
+	for(var/obj/structure/reagent_dispensers/cauldron/C in loc)
+		if(C.reagents?.total_volume)
+			C.reagents.heating(cook_energy(), cook_temperature())
+
+/obj/machinery/space_heater/proc/putOutFire()
+	on = 0
+	update_icon()
+
+/obj/machinery/space_heater/campfire/putOutFire()
+	remove_particles(PS_CANDLE)
+	remove_particles(PS_CANDLE2)
 	if (cell.charge)
 		on = 0
 		update_icon()
+
 	else
-		new /obj/effect/decal/cleanable/campfire(get_turf(src))
+		var/obj/effect/decal/cleanable/campfire/burnt_campfire = new (loc)
+		var/atom/movable/overlay/animation = anim(target = burnt_campfire, a_icon = icon, a_icon_state = "campfire_embers", sleeptime = 300, lay = ABOVE_LIGHTING_LAYER, plane = ABOVE_LIGHTING_PLANE)
+		animate(animation, alpha = 0, time = 300)
 		qdel(src)
 
 /obj/machinery/space_heater/campfire/stove/putOutFire()
+	remove_particles(PS_CANDLE)
+	remove_particles(PS_CANDLE2)
 	if(on)
 		visible_message("<span class='warning'>\The [src] dies down.</span>")
 	on = FALSE
 	update_icon()
+	var/atom/movable/overlay/animation = anim(target = src, a_icon = icon, a_icon_state = "stove_embers", sleeptime = 300, lay = ABOVE_LIGHTING_LAYER, plane = ABOVE_LIGHTING_PLANE)
+	animate(animation, alpha = 0, time = 300)
 
 
 /obj/machinery/space_heater/campfire/Crossed(mob/user as mob)

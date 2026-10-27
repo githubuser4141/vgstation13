@@ -137,6 +137,7 @@
 	icon = 'icons/obj/candle.dmi'
 	icon_state = "candlebox"
 	item_state = "candlebox"
+	icon_type = "candle"
 	inhand_states = list("left_hand" = 'icons/mob/in-hand/left/candles.dmi', "right_hand" = 'icons/mob/in-hand/right/candles.dmi')
 	foldable = /obj/item/stack/sheet/cardboard
 	starting_materials = list(MAT_CARDBOARD = 3750)
@@ -520,9 +521,8 @@
 
 
 /obj/item/weapon/storage/fancy/vials/New()
+	items_to_spawn = list(/obj/item/weapon/reagent_containers/glass/beaker/vial = storage_slots)
 	..()
-	for(var/i=1; i <= storage_slots; i++)
-		new /obj/item/weapon/reagent_containers/glass/beaker/vial(src)
 	update_icon()
 
 /obj/item/weapon/storage/fancy/vials/update_icon()
@@ -530,8 +530,8 @@
 
 	var/i = 0
 	for (var/obj/item/weapon/reagent_containers/glass/beaker/vial/vial in contents)
-		var/image/vial_image = image('icons/obj/vialbox.dmi',src,"vial")
-		if(vial.reagents.total_volume)
+		var/image/vial_image = image('icons/obj/vialbox.dmi',src,vial.icon_state)
+		if(!vial.opaque && vial.reagents.total_volume)
 			var/image/filling = image('icons/obj/vialbox.dmi',src, "vial_reagents")
 			filling.icon += mix_color_from_reagents(vial.reagents.reagent_list)
 			filling.alpha = mix_alpha_from_reagents(vial.reagents.reagent_list)
@@ -586,8 +586,8 @@
 
 	var/i = 0
 	for (var/obj/item/weapon/reagent_containers/glass/beaker/vial/vial in contents)
-		var/image/vial_image = image('icons/obj/vialbox.dmi',src,"vial")
-		if(vial.reagents.total_volume)
+		var/image/vial_image = image('icons/obj/vialbox.dmi',src,vial.icon_state)
+		if(!vial.opaque && vial.reagents.total_volume)
 			var/image/filling = image('icons/obj/vialbox.dmi',src, "vial_reagents")
 			filling.icon += mix_color_from_reagents(vial.reagents.reagent_list)
 			filling.alpha = mix_alpha_from_reagents(vial.reagents.reagent_list)

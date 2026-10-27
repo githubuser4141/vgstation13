@@ -14,7 +14,6 @@ var/global/list/reagents_to_always_log = list(AMUTATIONTOXIN, CYANIDE, CHEFSPECI
 	var/sharpness_flags = 0 //Describe in which way this thing is sharp. Shouldn't sharpness be exclusive to obj/item?
 	var/heat_production = 0
 	var/source_temperature = 0
-	var/smoking = FALSE //is the obj emitting smoke particles
 	var/price = 0
 
 	var/in_use = 0 // If we have a user using us, this will be set on. We will check if the user has stopped using us, and thus stop updating and LAGGING EVERYTHING!
@@ -34,7 +33,6 @@ var/global/list/reagents_to_always_log = list(AMUTATIONTOXIN, CYANIDE, CHEFSPECI
 
 	plane = OBJ_PLANE
 
-	var/defective = 0
 	var/quality = B_AVERAGE //What level of quality this object is.
 	var/datum/material/material_type //What material this thing is made out of
 	var/sheet_type = /obj/item/stack/sheet/metal
@@ -65,14 +63,16 @@ var/global/list/reagents_to_always_log = list(AMUTATIONTOXIN, CYANIDE, CHEFSPECI
 	var/is_cooktop //If true, the object can be used in conjunction with a cooking vessel, eg. a frying pan, to cook food.
 	var/obj/item/weapon/reagent_containers/pan/cookvessel //The vessel being used to cook food in. If generalized out to other types of vessels, make sure to also generalize the frying pan's cook_start(), etc. as well.
 
-	//Is the object covered in ash?
-	var/ash_covered = FALSE
-
 	var/verb_rotates = FALSE
 	var/alt_click_rotates = FALSE
 	var/ghost_can_rotate = FALSE
 	var/rotates_anchored = FALSE
 	var/rotate_type = null
+
+	var/thermal_variation_from_environment = 0.055//how much of the environmental temperature do we want to match per entropy procs.
+	var/thermal_variation_modifier = 1//if set to 0, no entropy will occur in that container. Range not binary, anything over 1 means faster cooling anything between 0 to 1 means slower.
+	var/image/ice_overlay = null
+	var/ice_alpha = 64
 
 /obj/New()
 	..()
@@ -356,7 +356,6 @@ var/global/list/reagents_to_always_log = list(AMUTATIONTOXIN, CYANIDE, CHEFSPECI
 	..()
 	if (cleanliness >= CLEANLINESS_WATER)
 		unglue()
-		ash_covered = FALSE
 
 /obj/proc/cultify()
 	qdel(src)
@@ -452,7 +451,7 @@ var/global/list/reagents_to_always_log = list(AMUTATIONTOXIN, CYANIDE, CHEFSPECI
 /obj/item/updateUsrDialog()
 	if(in_use)
 		var/is_in_use = 0
-		if(usr)
+		if(_using && usr)
 			_using |= usr
 		if(_using && _using.len)
 			for(var/mob/M in _using) // Only check things actually messing with us.
@@ -504,32 +503,7 @@ var/global/list/reagents_to_always_log = list(AMUTATIONTOXIN, CYANIDE, CHEFSPECI
 
 /obj/ignite()
 	if(..())
-		ash_covered = TRUE
 		remove_particles(PS_SMOKE)
-
-/obj/item/checkburn()
-	if(!flammable)
-		CRASH("[src] tried to burn despite not being flammable!")
-	if(on_fire)
-		return
-	if(!smoking)
-		checksmoke()
-	..()
-
-/obj/item/proc/checksmoke()
-	var/datum/gas_mixture/G = return_air()
-	if(!G)
-		return
-	while(G && G.temperature >= (autoignition_temperature * 0.75))
-		if(!smoking)
-			add_particles(PS_SMOKE)
-			smoking = TRUE
-		var/rate = clamp(lerp_generic(G.temperature,autoignition_temperature * 0.75,autoignition_temperature,0.1,1),0.1,1)
-		adjust_particles(PVAR_SPAWNING,rate,PS_SMOKE)
-		sleep(10 SECONDS)
-		G = return_air()
-	remove_particles(PS_SMOKE)
-	smoking = FALSE
 
 /obj/singularity_act()
 	if(flags & INVULNERABLE)
@@ -570,112 +544,8 @@ var/global/list/reagents_to_always_log = list(AMUTATIONTOXIN, CYANIDE, CHEFSPECI
 /obj/proc/multitool_menu(var/mob/user,var/obj/item/device/multitool/P)
 	return "<b>NO MULTITOOL_MENU!</b>"
 
-/obj/proc/linkWith(var/mob/user, var/obj/buffer, var/list/context)
-	return 0
-
 /obj/proc/shouldReInitOnMultitoolLink(var/mob/user, var/obj/buffer, var/list/context)
 	return FALSE
-
-/obj/proc/unlinkFrom(var/mob/user, var/obj/buffer)
-	return 0
-
-/obj/proc/canLink(var/obj/O, var/list/context)
-	return 0
-
-/obj/proc/isLinkedWith(var/obj/O)
-	return 0
-
-/obj/proc/getLink(var/idx)
-	return null
-
-/obj/proc/canClone(var/obj/O)
-	return 0
-
-/obj/proc/clone(var/obj/O)
-	return 0
-
-/obj/proc/linkMenu(var/obj/O)
-	var/dat=""
-	if(canLink(O, list()))
-		dat += " <a href='?src=\ref[src];link=1'>\[Link\]</a> "
-	return dat
-
-/obj/proc/format_tag(var/label,var/varname, var/act="set_tag")
-	var/value = vars[varname]
-	if(!value || value=="")
-		value="-----"
-	return "<b>[label]:</b> <a href=\"?src=\ref[src];[act]=[varname]\">[value]</a>"
-
-
-/obj/proc/update_multitool_menu(mob/user as mob)
-	var/obj/item/device/multitool/P = get_multitool(user)
-
-	if(!istype(P))
-		return 0
-
-	// Cloning stuff goes here.
-	var/obj/machinery/bufRef = P.buffer?.get();
-	if(P.clone && bufRef) // Cloning is on.
-		if(!canClone(bufRef))
-			to_chat(user, "<span class='attack'>A red light flashes on \the [P]; you cannot clone to this device!</span>")
-			return
-
-		if(!clone(bufRef))
-			to_chat(user, "<span class='attack'>A red light flashes on \the [P]; something went wrong when cloning to this device!</span>")
-			return
-
-		to_chat(user, "<span class='confirm'>A green light flashes on \the [P], confirming the device was cloned to.</span>")
-		return
-
-	var/dat = {"<html>
-	<head>
-		<title>[name] Configuration</title>
-		<style type="text/css">
-html,body {
-	font-family:courier;
-	background:#999999;
-	color:#333333;
-}
-
-a {
-	color:#000000;
-	text-decoration:none;
-	border-bottom:1px solid black;
-}
-		</style>
-	</head>
-	<body>
-		<h3>[name]</h3>
-"}
-	dat += multitool_menu(user,P)
-	if(P)
-		if(bufRef)
-			var/id = null
-			if(istype(bufRef, /obj/machinery/telecomms))
-				var/obj/machinery/telecomms/buffer = bufRef//Casting is better than using colons
-				id = buffer.id
-			else if(bufRef.vars["id_tag"])//not doing in vars here incase the var is empty, it'd show ()
-				id = bufRef:id_tag//sadly, : is needed
-
-			dat += "<p><b>MULTITOOL BUFFER:</b> [bufRef] [id ? "([id])" : ""]"//If you can't into the ? operator, that will make it not display () if there's no ID.
-
-			dat += linkMenu(bufRef)
-
-			if(bufRef)
-				dat += "<a href='?src=\ref[src];flush=1'>\[Flush\]</a>"
-			dat += "</p>"
-		else
-			dat += "<p><b>MULTITOOL BUFFER:</b> <a href='?src=\ref[src];buffer=1'>\[Add Machine\]</a></p>"
-	dat += "</body></html>"
-	user << browse(HTML_SKELETON(dat), "window=mtcomputer")
-	user.set_machine(src)
-	onclose(user, "mtcomputer")
-
-/obj/update_icon()
-	if(ash_covered)
-		cut_overlay(charred_overlay)
-		process_charred_overlay()
-	return
 
 /mob/proc/unset_machine()
 	if(machine)
@@ -762,26 +632,6 @@ a {
 /obj/proc/hide(h)
 	return
 
-/obj/proc/container_resist()
-	return
-
-/obj/proc/can_pickup(mob/living/user)
-	return 0
-
-/obj/proc/verb_pickup(mob/living/user)
-	return 0
-
-/obj/proc/can_quick_store(var/obj/item/I) //proc used to check that the current object can store another through quick equip
-	return 0
-
-/client
-	var/last_quick_stored = 0
-
-/obj/proc/quick_store(var/obj/item/I,mob/user) //proc used to handle quick storing
-	if(user?.client)
-		user.client.last_quick_stored = world.time
-	return 0
-
 /**
  * Called when a mob inside this obj's contents logs out.
  */
@@ -808,7 +658,7 @@ a {
 	else
 		return PACID
 
-/obj/proc/t_scanner_expose()
+/obj/t_scanner_expose(ray_range)
 	//don't reveal docking ports or spawns
 	if(invisibility > 0 && invisibility < INVISIBILITY_OBSERVER || alpha < 255)
 		var/old_invisibility = invisibility
@@ -821,11 +671,6 @@ a {
 			if(istype(U) && U.intact)
 				invisibility = old_invisibility
 				alpha = old_alpha
-
-/obj/proc/become_defective()
-	if(!defective)
-		defective = 1
-		desc += "\nIt doesn't look to be in the best shape."
 
 /obj/proc/clumsy_check(var/mob/living/user)
 	if(istype(user))
@@ -939,13 +784,14 @@ a {
 		additional_description = "On \the [src] is a carving, it depicts:\n"
 		var/list/characters = list()
 		for(var/i = 1 to material_mod)
+			var/add_character
 			if(prob(50)) //We're gonna use an atom
 				var/atom/AM = pick(existing_typesof(/mob/living/simple_animal))
-				characters |= initial(AM.name)
+				add_character =  initial(AM.name)
 			else
-				var/strangething = pick("captain","clown","mime","\improper CMO","cargo technician","medical doctor","[user ? user : "stranger"]","octopus","changeling","\improper Nuclear Operative", "[pick("greyshirt", "greytide", "assistant")]", "xenomorph","catbeast","[user && user.mind && user.mind.heard_before.len ? pick(user.mind.heard_before) : "strange thing"]","Central Command","\improper Ian","[ticker.Bible_deity_name]","Nar-Sie","\improper Poly the Parrot","\improper Wizard","vox")
-				characters |= strangething
-			additional_description += "[i == material_mod ? " & a " : "[i > 1 ? ", a ": " A "]"][characters[i]]"
+				add_character = pick("captain","clown","mime","\improper CMO","cargo technician","medical doctor","[user ? user : "stranger"]","octopus","changeling","\improper Nuclear Operative", "[pick("greyshirt", "greytide", "assistant")]", "xenomorph","catbeast","[user && user.mind && user.mind.heard_before.len ? pick(user.mind.heard_before) : "strange thing"]","Central Command","\improper Ian","[ticker.Bible_deity_name]","Nar-Sie","\improper Poly the Parrot","\improper Wizard","vox")
+			characters |= add_character
+			additional_description += "[i == material_mod ? " & a " : "[i > 1 ? ", a ": " A "]"][add_character]"
 		additional_description += ". They are in \the [pick("captains office","Space","mining outpost","vox outpost","a space station","[station_name()]","bar","kitchen","library","Science","void","Bluespace","Hell","Central Command")]"
 		if(material_mod > 2)
 			additional_description += ". They are [pick("[pick("fighting","robusting","attacking","beating up", "abusing")] [pick("each other", pick(characters))]","playing cards","firing lasers at [pick("something",pick(characters))]","crying","laughing","blank faced","screaming","cooking [pick("something", pick(characters))]", "eating [pick("something", pick(characters))]")]. "
@@ -1025,6 +871,9 @@ a {
 
 				to_chat(AM, "<span class='[danger ? "danger" : "notice"]'>You step in \the [src]!</span>")
 
+/obj/proc/post_ruin_load()
+	return
+
 /**
  * This proc is used for telling whether something can pass by this object in a given direction, for use by the pathfinding system.
  *
@@ -1034,10 +883,13 @@ a {
  * Arguments:
  * * ID- An ID card representing what access we have (and thus if we can open things like airlocks or windows to pass through them). The ID card's physical location does not matter, just the reference
  * * to_dir- What direction we're trying to move in, relevant for things like directional windows that only block movement in certain directions
- * * astar_caller- The movable we're checking pass flags for, if we're making any such checks
+ * * path_caller- The movable we're checking pass flags for, if we're making any such checks
  **/
-/obj/proc/CanAStarPass(obj/item/weapon/card/id/ID, to_dir, atom/movable/astar_caller)
-	if(istype(astar_caller) && (astar_caller.pass_flags & pass_flags_self))
+/obj/proc/CanPathPass(obj/item/weapon/card/id/ID, to_dir, atom/movable/path_caller)
+	if(istype(path_caller) && (path_caller.pass_flags & pass_flags_self))
+		return TRUE
+	// Border objects only block the edge they face.
+	if((flow_flags & ON_BORDER) && dir != to_dir)
 		return TRUE
 	. = !density
 
@@ -1100,6 +952,120 @@ a {
 
 /obj/get_heat_conductivity() //So keeping something in a closet can have an insulating effect.
 	return 0.5
+
+////////////THERMAL ENTROPY///////////////////////////////////////////////////////////////////////////////////////////////////
+
+//an overly simple thermal entropy proc that lets objects match the temperature of their environnement over time
+//we don't send the temperature difference back to the environnement because frankly it's not gonna matter in 99.999% of the cases.
+//furthermore, we stop looping once the temperature is less than a degree away from the environment, until we get moved or picked up.
+//won't resume on passive temperature changes in a room, but we can always add a subsystem later that checks for additional temperature changes every minute or so I guess
+
+/obj/proc/thermal_entropy()
+	set waitfor = FALSE
+
+	if (!reagents || !reagents.total_volume)
+		thermal_entropy_containers.Remove(src)
+		update_temperature_overlays()
+		return
+
+	var/datum/gas_mixture/air = return_air()
+
+	if (!air)
+		thermal_entropy_containers.Remove(src)
+		return
+
+	var/diff = air.temperature - reagents.chem_temp
+
+	if (!isturf(loc) && (air.pressure < 100))//low pressure environments slow down entropy, unless the item is laid directly onto the floor so space meat remains frozen until brought in
+		diff *= air.pressure/100
+
+	//we only bother if there's less than a 1 degree difference
+	if (abs(diff) < 2)
+		thermal_entropy_containers.Remove(src)
+
+	//based on newton's law of cooling
+	reagents.chem_temp = reagents.chem_temp + diff * thermal_variation_from_environment * thermal_variation_modifier
+
+	if(!(reagents.skip_flags & SKIP_RXN_CHECK_ON_HEATING))
+		reagents.handle_reactions()
+
+	update_icon()
+
+	return
+
+/obj/process_temperature()
+	thermal_entropy_containers |= src
+
+/obj/update_temperature_overlays()
+	if(reagents && reagents.total_volume)
+		if (reagents.chem_temp <= (T0C+2))
+			ice_alpha = 96 + clamp((-64*((reagents.chem_temp-T0C)/80)),0,64)
+			if(!ice_overlays["[type][icon_state]"])
+				set_ice_overlay()
+			else
+				update_ice_overlay()
+		steam_spawn_adjust(reagents.chem_temp)
+	else
+		remove_particles(PS_STEAM)
+
+///////////ICE OVERLAY///////////////////////////////////////////////////////////////////////////////////////////////////////////
+//appears when the food item's reagents' temperature falls to 0°C or below
+//based on how blood overlays are generated
+
+var/global/list/image/ice_overlays = list()
+/obj/proc/set_ice_overlay()
+	if(update_ice_overlay())
+		return
+
+	var/icon/I = new /icon(icon, icon_state)
+	//fills the icon_state with white (except where it's transparent)
+	I.Blend(rgb(255,255,255),ICON_ADD)
+	//inspired by urist's old cult rune drawing method, will let us add a 1px ice border around the object
+	var/list/border_pixels = list()
+	for(var/x = 1, x <= 32, x++)
+		for(var/y = 1, y <= 32, y++)
+			var/p = I.GetPixel(x, y)
+
+			if(p == null)
+				var/n = I.GetPixel(x, y + 1)
+				var/s = I.GetPixel(x, y - 1)
+				var/e = I.GetPixel(x + 1, y)
+				var/w = I.GetPixel(x - 1, y)
+
+				if(n == "#ffffff" || s == "#ffffff" || e == "#ffffff" || w == "#ffffff")
+					border_pixels += list(list(x,y))
+	for (var/list/L in border_pixels)
+		I.DrawBox(rgb(255, 255, 255), L[1], L[2])
+	//adds the ice texture
+	I.Blend(new /icon('icons/effects/effects.dmi', "ice"),ICON_MULTIPLY)
+
+	var/image/img = image(I)
+	img.name = "ice_overlay"
+	ice_overlays["[type][icon_state]"] = img
+	update_ice_overlay()
+
+/obj/proc/update_ice_overlay()
+	if(ice_overlays["[type][icon_state]"])
+		if (ice_overlay)
+			overlays -= ice_overlay
+		ice_overlay = image(ice_overlays["[type][icon_state]"])
+		ice_overlay.appearance_flags = RESET_COLOR|RESET_ALPHA
+		ice_overlay.alpha = ice_alpha
+		overlays += ice_overlay
+		return 1
+
+///////////STEAM PARTICLES/////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/obj/proc/steam_spawn_adjust(var/_temp)
+	if (!(PS_STEAM in particle_systems))
+		add_particles(PS_STEAM)
+	var/obj/abstract/particles_holder/steam_holder = particle_systems[PS_STEAM]
+	if (_temp < STEAMTEMP)
+		steam_holder.particles.spawning = 0
+	else
+		steam_holder.particles.spawning = clamp(0.1 + 0.002 * (_temp - STEAMTEMP),0.1,0.5)
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //This subtype is used by stuff that should generally not be disturbed by those procs
 /obj/abstract

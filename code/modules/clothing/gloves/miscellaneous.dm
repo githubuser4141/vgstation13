@@ -169,6 +169,8 @@
 	name = "brass knuckles"
 	icon_state = "knuckles"
 	item_state = "knuckles"
+	w_type = RECYK_METAL
+	flammable = FALSE
 
 	attack_verb = list("punches")
 	bonus_knockout = 17 //Slight knockout chance increase.
@@ -183,6 +185,8 @@
 	desc = "A pair of metal knuckles embedded with dull, but nonetheless painful spikes."
 	icon_state = "knuckles_spiked"
 	item_state = "knuckles_spiked"
+	mech_flags = MECH_SCAN_ILLEGAL
+	origin_tech = Tc_SYNDICATE + "=1"
 
 	bonus_knockout = 25
 	damage_added = 5

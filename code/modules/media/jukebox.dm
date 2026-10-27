@@ -159,9 +159,9 @@ var/global/global_playlists = list()
 
 
 var/global/list/loopModeNames=list(
-	JUKEMODE_SHUFFLE     = "Shuffle",
-	JUKEMODE_REPEAT_SONG = "Single",
-	JUKEMODE_PLAY_ONCE   = "Once"
+	/*JUKEMODE_SHUFFLE*/ "Shuffle",
+	/*JUKEMODE_REPEAT_SONG*/ "Single",
+	/*JUKEMODE_PLAY_ONCE*/ "Once"
 )
 /obj/machinery/media/jukebox
 
@@ -988,7 +988,7 @@ var/global/list/loopModeNames=list(
 /obj/machinery/media/jukebox/superjuke/attackby(obj/item/W, mob/user)
 	// NO FUN ALLOWED.  Emag list is included, anyway.
 	if(isEmag(W))
-		to_chat(user, "<span class='warning'>Your [W] refuses to touch \the [src]!</span>")
+		to_chat(user, "<span class='warning'>Your [W.name] refuses to touch \the [src]!</span>")
 		return
 	..()
 

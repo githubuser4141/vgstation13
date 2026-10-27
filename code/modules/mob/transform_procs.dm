@@ -174,7 +174,7 @@
 	O.forceMove(loc)
 	O.mmi = new /obj/item/device/mmi(O)
 	O.mmi.transfer_identity(src)//Does not transfer key/client.
-	var/datum/job/job_datum = job_master.GetJob("Cyborg")
+	var/datum/job/job_datum = locate(/datum/job/cyborg) in job_master.occupations
 	if(jobban_isbanned(O, "Cyborg") || (job_datum ? !job_datum.player_old_enough(O.client) : 0)) //You somehow managed to get borged, congrats.
 		to_chat(src, "<span class='warning' style=\"font-family:Courier\">WARNING: Illegal operation detected.</span>")
 		to_chat(src, "<span class='danger'>Self-destruct mechanism engaged.</span>")
@@ -379,3 +379,6 @@
 		my_appearance.b_facial = my_appearance.b_hair = 5
 		update_hair() //wie zal dat zijn?
 
+		drop_hands(force_drop = 1)
+		var/strooigoed = new /obj/item/weapon/reagent_containers/food/snacks/kruidnoten(get_active_hand())
+		put_in_hands(strooigoed)

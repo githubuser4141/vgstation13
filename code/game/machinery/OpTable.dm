@@ -113,7 +113,7 @@
 /obj/machinery/optable/process()
 	check_victim()
 
-/obj/machinery/optable/proc/TryToThrowOnTable(var/mob/user,var/mob/victim)
+/obj/machinery/optable/TryToThrowOnTable(var/mob/user,var/mob/victim)
 	for (var/atom/A in loc)
 		if (A == src || A == victim || A == user)
 			continue
@@ -138,8 +138,8 @@
 
 	if (ishuman(C))
 		victim = C
-		C.resting = 1 //This probably shouldn't be using this variable
-		C.update_canmove() //but for as long as it does we're adding sanity to it
+		if(!C.resting)
+			C.rest_action()
 
 	if (C == user)
 		user.visible_message("[user] climbs on the operating table.","You climb on the operating table.")

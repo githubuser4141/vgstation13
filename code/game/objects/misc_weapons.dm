@@ -231,7 +231,7 @@ var/list/available_redphone_names3 = list("1","2","3","4","5","6","7","8","9")
 	to_chat(viewers(user), "<span class='danger'>[user] is wrapping the [src.name] around \his neck! It looks like \he's trying to commit suicide.</span>")
 	return(SUICIDE_ACT_OXYLOSS)
 
-/obj/item/weapon/legcuffs/bolas/throw_at(var/atom/A, throw_range, throw_speed)
+/obj/item/weapon/legcuffs/bolas/throw_at(atom/target, range, speed, override = TRUE, fly_speed = 0, list/whitelist, superthrow = FALSE)
 	if(!throw_range)
 		return //divide by zero, also you throw like a girl
 	if(istype(usr, /mob/living/carbon/human)) //if the user is human
@@ -241,16 +241,16 @@ var/list/available_redphone_names3 = list("1","2","3","4","5","6","7","8","9")
 			H.Stun(2)
 			H.drop_item(src)
 			return
-	var/turf/target = get_turf(A)
+	var/turf/targ = get_turf(target)
 	var/new_x = src.x
 	var/new_y = src.y
 	var/scaler //used to changed the normalised vector to the proper size
-	scaler = throw_range / max(abs(target.x - src.x), abs(target.y - src.y),1) //whichever is larger magnitude is what we normalise to
-	if (target.x - src.x != 0) //just to avoid fucking with math for no reason
-		var/xadjust = round((target.x - src.x) * scaler) //normalised vector is now scaled up to throw_range
+	scaler = throw_range / max(abs(targ.x - src.x), abs(targ.y - src.y),1) //whichever is larger magnitude is what we normalise to
+	if (targ.x - src.x != 0) //just to avoid fucking with math for no reason
+		var/xadjust = round((targ.x - src.x) * scaler) //normalised vector is now scaled up to throw_range
 		new_x = src.x + xadjust //the new target at max range
-	if (target.y - src.y != 0)
-		var/yadjust = round((target.y - src.y) * scaler)
+	if (targ.y - src.y != 0)
+		var/yadjust = round((targ.y - src.y) * scaler)
 		new_y = src.y + yadjust
 	// log_admin("Adjusted target of [adjtarget.x] and [adjtarget.y], adjusted with [xadjust] and [yadjust] from [scaler]")
 	..(locate(new_x, new_y, src.z), throw_range, throw_speed)
@@ -453,9 +453,11 @@ var/list/available_redphone_names3 = list("1","2","3","4","5","6","7","8","9")
 	var/trapped = 0
 	var/datum/organ/external/trappedorgan //The limb currently trapped, it must be a leg
 	var/mob/living/carbon/human/trappeduser
-	var/mob/living/simple_animal/hostile/bear/trappedbear
+	var/mob/living/simple_animal/trappedbear
 	var/obj/item/weapon/grenade/iedcasing/IED = null
 	var/image/ied_overlay
+	health=60 //so animals don't break it in 1 hit if they attack it.
+	maxHealth=60
 
 	var/trapped_user_key
 
@@ -611,6 +613,29 @@ var/list/available_redphone_names3 = list("1","2","3","4","5","6","7","8","9")
 					return
 	..()
 
+/obj/item/weapon/beartrap/try_break(datum/throwparams/propelparams, hit_atom)
+	if(health <= 0)
+		if(trappeduser || trappedbear)
+			armed = 0
+			anchored = FALSE
+			update_icon()
+			visible_message("\the [src] is forced open")
+			health=maxHealth
+			if(trappeduser)
+				unlock_atom(trappeduser)
+				trappeduser.unregister_event(/event/moved, src, nameof(src::forcefully_remove()))
+				trappeduser=null
+			if(trappedbear)
+				unlock_atom(trappedbear)
+				trappedbear.update_icon()
+				trappedbear = null
+			return FALSE
+
+		visible_message("\the [src] is smashed apart into nothing but metal...")
+		new/obj/item/stack/sheet/metal(loc,rand(2,3))
+		new/obj/item/stack/rods(loc,rand(1,2))
+		..()
+
 /obj/item/weapon/beartrap/attackby(var/obj/item/I, mob/user) //Let's get explosive.
 	if(istype(I, /obj/item/weapon/grenade/iedcasing))
 		if(IED)
@@ -699,7 +724,8 @@ var/list/available_redphone_names3 = list("1","2","3","4","5","6","7","8","9")
 
 			else if (istype(AM,/mob/living/simple_animal/hostile/bear))
 				trap(AM)
-
+			else if (istype(AM,/mob/living/simple_animal/complex))
+				trap(AM)
 			else if(isanimal(AM))
 				armed = 0
 				anchored = FALSE
@@ -717,46 +743,8 @@ var/list/available_redphone_names3 = list("1","2","3","4","5","6","7","8","9")
 
 
 /obj/item/weapon/beartrap/proc/trap(var/mob/living/L)
-	if (ishuman(L))
-		var/mob/living/carbon/human/H = L
-		trappedorgan = H.pick_usable_organ(LIMB_LEFT_LEG, LIMB_RIGHT_LEG)
-		if(!trappedorgan)//no leg to snap to
-			return
-		trapped = 1
-		trappeduser = H
-		armed = 0
-
-		playsound(src, 'sound/effects/snap.ogg', 60, 1)
-		H.audible_scream()
-		lock_atom(H, /datum/locking_category/beartrap)
-		H.register_event(/event/moved, src, nameof(src::forcefully_remove()))
-
-		if(trappedorgan.take_damage(15, 0, 25, SERRATED_BLADE & SHARP_BLADE))
-			H.UpdateDamageIcon()
-			H.updatehealth()
-
-		if(!H.pick_usable_organ(trappedorgan)) //check if they lost their leg, and get them out of the trap
-			to_chat(H, "<span class='warning'>With your leg missing, you slip out of the bear trap!</span>")
-			trapped = 0
-			trappeduser.unregister_event(/event/moved, src, nameof(src::forcefully_remove()))
-			trappeduser = null
-			unlock_atom(H)
-			anchored = FALSE
-
-		H.update_canmove()
-	else if (istype(L,/mob/living/simple_animal/hostile/bear) || istype(L,/mob/living/simple_animal/hostile/spacehog))
-		trapped = 1
-		trappedbear = L
-		trappedbear.LostTarget()
-		trappedbear.dir = SOUTH
-		armed = 0
-		playsound(src, 'sound/effects/snap.ogg', 60, 1)
-		lock_atom(trappedbear, /datum/locking_category/beartrap)
-		trappedbear.adjustBruteLoss(20)
-		trappedbear.update_canmove()
-		trappedbear.update_icon()
-
-	if (IED)
+	.=L.beartrap_act(src)
+	if (. && IED)
 		IED_det(L)
 
 /obj/item/weapon/beartrap/proc/IED_det(var/mob/living/L)

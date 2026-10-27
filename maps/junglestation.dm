@@ -13,6 +13,7 @@
 	zCentcomm = 3
 	zAsteroid = 4
 	zDerelict = 5
+	var/zSecondunderground=6
 
 	zDeepSpace = -1
 	zTCommSat = -1
@@ -21,33 +22,88 @@
 		/datum/zLevel/junglesurface,
 		/datum/zLevel/jungleunderground,
 		/datum/zLevel/centcomm,
-		/datum/zLevel/mining,
+		/datum/zLevel/junglesurface/mining,
 		/datum/zLevel/space{
 			name = "derelict" ;
 			},
+		/datum/zLevel/jungleunderground,
 		)
 	enabled_jobs = list(/datum/job/trader)
 	event_blacklist = list(/datum/event/radiation_storm,/datum/event/carp_migration,/datum/event/rogue_drone,/datum/event/immovable_rod,
 						/datum/event/meteor_wave,/datum/event/meteor_shower,/datum/event/thing_storm/meaty_gore,/datum/event/thing_storm/blob_shower,
 						/datum/event/thing_storm/blob_storm,/datum/event/thing_storm/fireworks)
 	load_map_elements = list(
+	/datum/map_element/dungeon/mecha_graveyard
 	)
 
 	skip_hobo_shack=TRUE
 	can_enlarge=FALSE
 
-	holomap_offset_x = list(0,0,0,86,4,0,0,)
-	holomap_offset_y = list(0,0,0,94,10,0,0,)
+	holomap_offset_x = list(80,80,0,86,4,0,0,)
+	holomap_offset_y = list(50,50,0,94,10,0,0,)
 
 	center_x = 182
 	center_y = 163
 
 /datum/map/active/New()
+	daynight_z_lvls = list(zMainStation,zAsteroid)
 	..()
+	//linking roid and station
+	zLevels[zMainStation].transition_crosswrap_z=list(zAsteroid,zAsteroid,zAsteroid,zAsteroid)
+	zLevels[zAsteroid].transition_crosswrap_z=list(zMainStation,zMainStation,zMainStation,zMainStation)
+	//linking roid underground layer and station
+	zLevels[zAdditionalStationZlevel].transition_crosswrap_z=list(zSecondunderground,zSecondunderground,zSecondunderground,zSecondunderground)
+	zLevels[zSecondunderground].transition_crosswrap_z=list(zAdditionalStationZlevel,zAdditionalStationZlevel,zAdditionalStationZlevel,zAdditionalStationZlevel)
 	world.name = "NT Colony Gamma-8"
 	station_name="NT Colony Gamma-8"
-	daynight_z_lvls=list(1)
-	turfs_to_regrow=list()
+
+
+/datum/map/active/map_specific_init()
+	generate_mapvaults()
+	//replace all the asteroid turfs that are generated randomly with the tunnel generation (i don't even know where) with the proper tiles.
+	var/num_ass_replacments=0
+	for(var/area/surface/jungle/mining/unexplored/A in areas)
+		for(var/turf/unsimulated/floor/asteroid/T in A.contents)
+			new /turf/unsimulated/floor/planetary/path/jungle(T)
+			num_ass_replacments++
+	world.log << "replaced [num_ass_replacments] asteroid tiles to be jungle."
+
+//partially stolen from snaxi
+/datum/map/active/generate_mapvaults()
+	var/list/list_of_vaults = get_ruin_list(whitelist = RUIN_TYPE_JUNGLE)
+	var/budget = RUIN_BUDGET_JUNGLE
+
+	var/area/surface/jungle/roid/vaults/VAULT_AREA=locate(/area/surface/jungle/roid/vaults)
+	if(!VAULT_AREA)
+		message_admins("<span class='info'>Unable to find a suitable area to spawn vaults in, skipping surface vault generation!</span>")
+		return 0
+
+	var/placed_rand = populate_area_with_vaults(VAULT_AREA, list_of_vaults, -1, 1, filter_function=/proc/jungle_filter, overwrites=TRUE)
+	message_admins("<span class='info'>placed [placed_rand] vaults in [VAULT_AREA]</span>")
+
+	return placed_rand
+
+/proc/jungle_filter(var/datum/map_element/E, var/turf/start_turf)
+	var/list/dimensions = E.get_dimensions()
+	var/result = check_surface_placement(start_turf,dimensions[1], dimensions[2])
+	return result
+
+/proc/check_surface_placement(var/turf/T,var/size_x,var/size_y,var/ignore_walls=0)
+	var/list/surroundings = list()
+
+	surroundings |= range(7, locate(T.x,T.y,T.z))
+	surroundings |= range(7, locate(T.x+size_x,T.y,T.z))
+	surroundings |= range(7, locate(T.x,T.y+size_y,T.z))
+	surroundings |= range(7, locate(T.x+size_x,T.y+size_y,T.z))
+
+	for(var/area/A in surroundings)
+		if(!istype(A,/area/surface/jungle/roid/vaults))
+			return 0
+	for(var/turf/S in surroundings) //avoid nearby locations.
+		if(S.type!=/turf/unsimulated/floor/planetary/grass/jungle)
+			return 0
+	return 1
+
 
 /****************************
 **	Day and Night Lighting **
@@ -56,12 +112,40 @@
 
 /datum/subsystem/daynightcycle
 	overwrite_solars=TRUE
-	solar_orbit_period=130.6359
+	solar_orbit_period=163.2948
+	wait = 30 SECONDS
 	var/solartime=0 //start at 0. set not like that for debugging. or manually set next_firetime with varedit.
 
-/datum/subsystem/daynightcycle/process_lighting()
-	flags&=(0^SS_FIRE_IN_LOBBY) //we don't want this one firing in lobby constantly, as we've tweaked the lighting to be just right on startup. we still want it to fire once though.
-	
+
+/datum/subsystem/daynightcycle/fire(resumed = FALSE)
+	if(!currentrun)
+		currentrun = list()
+	if(world.time >= next_firetime)
+		if(lighting_update_lights_lowpriority.len) //prevent overwriting current lighting changes by not updating lighting until we're done.
+			message_admins("day/night subsystem was fired, when there are still [lighting_update_lights_lowpriority.len] unprocessed lighting updates remaining. Is the server lagging, or was it force-fired? Delaying fire for 15 seconds...")
+			next_firetime=world.time + 15 SECONDS
+			return
+
+		advance_time()
+		if(!resumed)
+			for(var/datum/virtual_z/vz in daynight_v_lvls)
+				currentrun += vz.daynight_turfs.Copy()
+
+	while(currentrun.len)
+		var/turf/T = currentrun[currentrun.len]
+		currentrun.len--
+
+		if(!T || T.gcDestroyed)
+			continue
+
+		T.set_light(next_light_range,next_light_power,current_timeOfDay,TRUE)
+
+		if(MC_TICK_CHECK)
+			return
+
+
+/datum/subsystem/daynightcycle/advance_time()
+	flags&= ~SS_FIRE_IN_LOBBY //we don't want this one firing in lobby constantly, as we've tweaked the lighting to be just right on startup. we still want it to fire once though.
 	// YCbCr is a superior colorspace. fight me.
 	var/luma=0.0
 	var/chroma_b=0.0
@@ -77,7 +161,7 @@
 	luma+=0.64*power //red dwarves are weak stars.
 	chroma_r+=0.70*power //they also would give off fuckhuge solar flares.
 	chroma_b-=0.40*power // but that's a problem for silicons to deal with.
-	
+
 	//long-wave atmospheric absorption when the star is at a sharper angle (this is why sunsets are red)
 	chroma_r+=0.2*(1-power)*power
 	chroma_b-=0.3*(1-power)*power
@@ -102,7 +186,7 @@
 
 
 	//all numbers above this are completely arbitrary and are there to insure that the day/night cycle looks as cool as possible, meaning we have a lot of color variety and a satisfying progression between light and dark, and that it changes not too fast and not too slow. change them however you want.
-	
+
 	luma=luma**(1/2.2) //apply standard gamma correction
 
 	//constants defined by ITU-R BT.2020
@@ -174,35 +258,13 @@
 			bestangle=angle-90 //offset by 90. we start at 0, which makes it start at -90 (270), making it to that the stars "rise" in the west, then set in the east.
 	nearest_star_angle=bestangle%%360
 	nearest_star_power=bestpower
-	
-	
-	next_firetime=world.time + 4 MINUTES //station is too big to tick at 2 minutes. not without severe sever raep, at least.
+
+
+	next_firetime=world.time + 5 MINUTES
 	solartime++
 
 /datum/subsystem/daynightcycle/play_globalsound()
 	return
-
-
-/datum/subsystem/foliage_regrow
-	growth_chance=95
-	var/growth_delay=5 MINUTES
-	
-	
-/datum/subsystem/foliage_regrow/regrow_turf(var/turf/T)
-	if(!T)
-		return null
-	if (T.type!=/turf/unsimulated/floor/jungle/grass)
-		return null
-	if(/obj/structure/flora in T.contents)
-		return null
-	var/turf/unsimulated/floor/jungle/grass/G=T
-	if(G.regrowticks <= world.time-growth_delay)
-		var/created=G.generate_foliage()
-		if(!created)
-			turfs_to_regrow+=G
-		return created
-	else
-		turfs_to_regrow+=G
 
 
 ////////////////////////////////////////////////////////////////

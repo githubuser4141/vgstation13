@@ -26,14 +26,27 @@ var/global/list/battery_online =	list(
 										image('icons/obj/power.dmi', "smes-op1")
 										)
 
+/proc/init_smes_overlays()
+	for (var/image/I in battery_charge)
+		I.plane = ABOVE_LIGHTING_PLANE
+	for (var/image/I in battery_charging)
+		I.plane = ABOVE_LIGHTING_PLANE
+	for (var/image/I in battery_online)
+		I.plane = ABOVE_LIGHTING_PLANE
+	for(var/obj/machinery/power/battery/smes/S in power_machines)
+		S.update_icon()
+
 /obj/machinery/power/battery/update_icon()
 	overlays.len = 0
 	icon_state = initial(icon_state)
 
 	if(stat & (BROKEN | FORCEDISABLE | EMPED))
+		luminosity = 0
 		return
 
 	overlays += battery_online[online + 1]
+
+	luminosity = 2
 
 	if(charging)
 		overlays += battery_charging[2]
@@ -105,6 +118,7 @@ var/global/list/battery_online =	list(
 	// Misc
 	var/name_tag = ""
 	var/infinite_power = FALSE //makes the machine just generate power itself
+	var/external_power_supply = FALSE //outputs power at set level without draining stored charge
 
 	//Holders for powerout event.
 	var/last_output = 0
@@ -119,7 +133,7 @@ var/global/list/battery_online =	list(
 	//update_sound()
 
 /obj/machinery/power/battery/setup_sound()
-	sound_emitter = new /datum/sound_emitter(src, is_static = TRUE)
+	sound_emitter = new /datum/sound_emitter(src)
 	if(sound_emitter)
 		//var/sound/smes_hum = sound()
 		//smes_hum.file = 'sound/machines/looping/smes_hum.ogg'
@@ -160,7 +174,10 @@ var/global/list/battery_online =	list(
 
 	// Input
 	chargereceived = 0
-	if (charging)
+	if (external_power_supply)
+		chargeload = 0
+		// External supply satisfies demand only - don't charge SMES
+	else if (charging)
 
 		// Manual charge mode is the 'old' mode, when batteries only charge when available power is higher than set charge level
 		// Auto charge mode lets batteries take any amount of available power, limited by charge level
@@ -193,9 +210,11 @@ var/global/list/battery_online =	list(
 	// Output
 	if (online && get_powernet()) // how can discharge be real if our powernet isn't real
 		lastout = output
-		output = min(charge / SMESRATE, outputlevel) // Limit output to that stored
-
-		charge -= output * SMESRATE // Reduce the storage (may be recovered in /restore() if excessive)
+		if(external_power_supply)
+			output = outputlevel // External supply matches demand, no charge drain
+		else
+			output = min(charge / SMESRATE, outputlevel) // Limit output to that stored
+			charge -= output * SMESRATE // Reduce the storage (may be recovered in /restore() if excessive)
 
 		add_avail(output) // Add output to powernet (smes side)
 
@@ -213,6 +232,10 @@ var/global/list/battery_online =	list(
  */
 /obj/machinery/power/battery/proc/restore()
 	if (stat & BROKEN)
+		return
+
+	if (external_power_supply) // External supply provides free power - don't absorb excess back into charge
+		lastexcess = 0
 		return
 
 	var/_chargedisplay = chargedisplay()

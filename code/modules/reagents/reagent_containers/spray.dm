@@ -23,7 +23,7 @@
 	var/delay_spraying = TRUE // Whether to delay the next attack after using it
 
 	//! List of things to avoid spraying on close range. TODO Remove snowflake, handle this in every attackby() properly.
-	var/list/ignore_spray_types = list(/obj/item/weapon/storage, /obj/structure/table, /obj/structure/rack, /obj/structure/closet, /obj/structure/sink)
+	var/list/ignore_spray_types = list(/obj/item/weapon/storage, /obj/structure/table, /obj/structure/rack, /obj/structure/closet, /obj/structure/wc/sink)
 
 /obj/item/weapon/reagent_containers/spray/New()
 	..()
@@ -106,7 +106,7 @@
 			process_temperature()
 			if(clumsy_check(user))
 				user.ignite()
-				user.visible_message("<span class='danger'>[user] tried to spray a plume of fire from \his [src] but ignited himself!</span>","<span class='danger'>You try to spray a plume of fire from your [src] but only ignite yourself!</span>")
+				user.visible_message("<span class='danger'>[user] tried to spray a plume of fire from \his [src] but ignited himself!</span>","<span class='danger'>You try to spray a plume of fire from your [src.name] but only ignite yourself!</span>")
 				return
 			if(!user.get_item_by_slot(slot_gloves) && prob(10))
 				to_chat(user,"<span class='danger'>The heat from the spray bottle burns your hand!</span>")
@@ -125,7 +125,7 @@
 			spawn()
 				projectile.OnFired()
 				projectile.process()
-			user.visible_message("<span class='danger'>[user] sprays a plume of fire from \his [src]!</span>","<span class='danger'>You spray a plume of fire from your [src]!</span>")
+			user.visible_message("<span class='danger'>[user] sprays a plume of fire from \his [src]!</span>","<span class='danger'>You spray a plume of fire from your [src.name]!</span>")
 			update_icon()
 			playsound(user, 'sound/weapons/flamethrower.ogg', 50, 1)
 			return

@@ -69,7 +69,7 @@
 	color = "#240080" //rgb: 36, 0, 128
 	dupeable = FALSE
 	density = 7.94
-	specheatcap = 1.39
+	specheatcap = 0.39
 
 /datum/reagent/apetrine/reaction_obj(var/obj/O, var/volume)
 	if(..())
@@ -171,7 +171,6 @@
 	description = "An odorless, fine, white micro-crystalline powder. Usually obtained by grinding limestone, or egg shells."
 	color = "#FFFFFF"
 	density = 2.73
-	specheatcap = 83.43
 
 /datum/reagent/calciumhydroxide
 	name = "Calcium Hydroxide"
@@ -179,7 +178,6 @@
 	description = "Hydrated lime, non-toxic."
 	color = "#FFFFFF"
 	density = 2.211
-	specheatcap = 87.45
 
 /datum/reagent/calciumoxide
 	name = "Calcium Oxide"
@@ -187,7 +185,6 @@
 	description = "Quicklime. Reacts strongly with water forming calcium hydrate and generating heat in the process"
 	color = "#FFFFFF"
 	density = 3.34
-	specheatcap = 42.09
 
 /datum/reagent/calciumoxide/on_mob_life(var/mob/living/M)
 	if(..())
@@ -279,8 +276,8 @@
 	description = "Glycerol is a simple polyol compound. Glycerol is sweet-tasting and of low toxicity."
 	reagent_state = REAGENT_STATE_LIQUID
 	color = "#808080" //rgb: 128, 128, 128
-	density = 4.84
-	specheatcap = 1.38
+	density = 1.09
+	specheatcap = 3.4
 
 //Just for fun
 var/list/procizine_calls = list()
@@ -433,12 +430,10 @@ var/procizine_tolerance = 0
 				to_chat(M, "<span class='notice'>You hear a ticking sound</span>")
 			else
 				to_chat(M, "<span class='notice'>You hear a tocking sound</span>")
-	if((floor(world.time / (1 HOURS)) + 1) > currentHour)
-		if(!currentHour)
-			currentHour = floor(world.time / (1 HOURS)) + 1
-		else
+	if((floor(get_round_time() / (1 HOURS)) + 1) > currentHour)
+		if(currentHour)
 			punctualiteExplode(M)
-			currentHour = floor(world.time / (1 HOURS)) + 1
+		currentHour = floor(get_round_time() / (1 HOURS)) + 1
 
 /datum/reagent/punctualite/proc/punctualiteExplode(var/mob/living/H)
 	var/bigBoom = 0
@@ -456,7 +451,7 @@ var/procizine_tolerance = 0
 	reagent_state = REAGENT_STATE_LIQUID
 	color = "#FFFFFF" //rgb: 255, 255, 255
 	density = 1.122
-	specheatcap = 6.9036
+	specheatcap = 3
 
 /datum/reagent/saltwater/on_mob_life(var/mob/living/M)
 	if(..())
@@ -475,7 +470,7 @@ var/procizine_tolerance = 0
 	color = "#DEF7F5" //rgb: 192, 227, 233
 	alpha = 64
 	density = 0.622
-	specheatcap = 99.27
+	specheatcap = 6
 
 /datum/reagent/self_replicating
 	id = EXPLICITLY_INVALID_REAGENT_ID
@@ -498,6 +493,7 @@ var/procizine_tolerance = 0
 	density = 19.3
 	specheatcap = 0.129
 	whitelisted_ids = list(MERCURY)
+	arcane_id = MERCURY
 
 /datum/reagent/sodium_silicate
 	name = "Sodium Silicate"
@@ -506,7 +502,6 @@ var/procizine_tolerance = 0
 	reagent_state = REAGENT_STATE_SOLID
 	color = "#E5E5E5"
 	density = 2.61
-	specheatcap = 111.8
 
 /datum/reagent/temp_hearer/
 	id = EXPLICITLY_INVALID_REAGENT_ID
@@ -541,6 +536,7 @@ var/procizine_tolerance = 0
 	color = "#8E18A9" //rgb: 142, 24, 169
 	density = 1.58
 	specheatcap = 1.44
+	arcane_id = ROGAN
 
 /datum/reagent/temp_hearer/locutogen/on_mob_life(var/mob/living/M)
 	if(..())

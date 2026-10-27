@@ -69,23 +69,23 @@ Class Procs:
 	var/list/currentrun
 	var/currentpart = SSAIR_TILES
 
-	var/list/cost_parts = list(SSAIR_TILES     = 0,\
-	                           SSAIR_DEFERRED  = 0,\
-	                           SSAIR_EDGES     = 0,\
-/*	                           SSAIR_FIRE_ZONE = 0,*/\
-	                           SSAIR_HOTSPOT   = 0,\
-	                           SSAIR_ZONE      = 0)
+	var/list/cost_parts = list(/*SSAIR_TILES*/ 0,\
+	                           /*SSAIR_DEFERRED*/ 0,\
+	                           /*SSAIR_EDGES*/ 0,\
+/*	                           /*SSAIR_FIRE_ZONE*/ 0,*/\
+	                           /*SSAIR_HOTSPOT*/ 0,\
+	                           /*SSAIR_ZONE*/ 0)
 
 	var/list/zones = list()
 	var/list/edges = list()
 
 	//Geometry process lists
-	var/list/processing_parts = list(SSAIR_TILES     = list(),\
-	                                 SSAIR_DEFERRED  = list(),\
-	                                 SSAIR_EDGES     = list(),\
-/*	                                 SSAIR_FIRE_ZONE = list(),*/\
-	                                 SSAIR_HOTSPOT   = list(),\
-	                                 SSAIR_ZONE      = list())
+	var/list/processing_parts = list(/*SSAIR_TILES*/ list(),\
+	                           /*SSAIR_DEFERRED*/ list(),\
+	                           /*SSAIR_EDGES*/ list(),\
+/*	                           /*SSAIR_FIRE_ZONE*/ list(),*/\
+	                           /*SSAIR_HOTSPOT*/ list(),\
+	                           /*SSAIR_ZONE*/ list())
 
 	var/active_zones = 0
 
@@ -396,6 +396,8 @@ Total Unsimulated Turfs: [world.maxx*world.maxy*world.maxz - simulated_turf_coun
 
 
 /datum/subsystem/air/proc/has_same_air(turf/A, turf/B)
+	if(!A || !B)
+		return A == B // both null counts as "same"; one null does not
 	if(A.oxygen != B.oxygen)
 		return 0
 	if(A.nitrogen != B.nitrogen)

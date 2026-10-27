@@ -93,9 +93,6 @@ var/ZAS_fuel_energy_release_rate = zas_settings.Get(/datum/ZAS_Setting/fire_fuel
 	var/fire_sprite = "fire"
 	var/fire_overlay = null
 
-	var/mutable_appearance/charred_overlay
-	var/last_char = 0
-
 	var/atom/movable/firelightdummy/firelightdummy
 
 /atom/movable/New()
@@ -162,54 +159,6 @@ var/ZAS_fuel_energy_release_rate = zas_settings.Get(/datum/ZAS_Setting/fire_fuel
 	if(reagents?.total_volume)
 		return TRUE
 
-/atom/proc/set_charred_overlay()
-	return
-
-/atom/proc/process_charred_overlay()
-	return
-
-/obj/set_charred_overlay(char_alpha = 96)
-	REMOVE_KEEP_TOGETHER(src, "ash_charred")
-	cut_overlay(charred_overlay)
-	var/mutable_appearance/new_charred_overlay = mutable_appearance('icons/effects/effects.dmi', "char", alpha = char_alpha, appearance_flags = RESET_COLOR|RESET_ALPHA)
-	new_charred_overlay.blend_mode = BLEND_INSET_OVERLAY
-	charred_overlay = new_charred_overlay
-	ADD_KEEP_TOGETHER(src, "ash_charred")
-	add_overlay(charred_overlay)
-
-/obj/process_charred_overlay()
-	if(thermal_mass)
-		var/c_alpha = 96 + clamp((64*(1-(thermal_mass/initial_thermal_mass))),0,64)
-		set_charred_overlay(c_alpha)
-		last_char = world.time
-	else
-		if(prob(10)) //10% chance each tick of item getting charred
-			set_charred_overlay()
-
-/obj/effect/process_charred_overlay()
-	return
-
-/turf/process_charred_overlay()
-	if(locate(/obj/effect/ash) in src)
-		var/obj/effect/ash/A = locate(/obj/effect/ash) in src
-		if(flammable)
-			A.alpha = clamp((80*(1-(thermal_mass/initial_thermal_mass))),0,80) //turf's char overlays aren't as harsh as objects'
-		else
-			A.alpha = 40
-	else
-		new /obj/effect/ash(src)
-
-/obj/effect/ash
-	name = "ash"
-	icon_state = "char"
-	alpha = 0
-	anchored = 1
-	mouse_opacity = 0
-
-/obj/effect/ash/clean_act(var/cleanliness)
-	if(cleanliness >= CLEANLINESS_WATER)
-		qdel(src)
-
 /**
  * Burns solid objects and produces heat.
  *
@@ -259,9 +208,6 @@ var/ZAS_fuel_energy_release_rate = zas_settings.Get(/datum/ZAS_Setting/fire_fuel
 	useThermalMass(delta_m)
 	genSmoke(oxy_ratio,temperature,T)
 
-	if(world.time - last_char >= 10 SECONDS)
-		process_charred_overlay()
-
 	//Change in internal energy = energy produced by combustion (assuming perfect combustion).
 	heat_out = material.heating_value * delta_m
 
@@ -274,7 +220,8 @@ var/ZAS_fuel_energy_release_rate = zas_settings.Get(/datum/ZAS_Setting/fire_fuel
 		//Change in internal energy = change in energy due to heat transfer due to isochoric reaction
 		delta_t = heat_out/(delta_m * material.heating_value)
 		T.hotspot_expose(temperature + delta_t, FULL_FLAME, 1)
-		new /obj/effect/fire(T)
+		if(!locate(/obj/effect/fire) in T)
+			new /obj/effect/fire(T)
 
 	//Ash the object if all of its mass has been consumed.
 	if(thermal_mass <= 0.05)
@@ -335,7 +282,8 @@ var/ZAS_fuel_energy_release_rate = zas_settings.Get(/datum/ZAS_Setting/fire_fuel
 	//Start a fire on the tile if a burning object is present without an underlying fire effect.
 	if(!in_fire)
 		T.hotspot_expose(max_temperature, FULL_FLAME, 1)
-		new /obj/effect/fire(T)
+		if(!locate(/obj/effect/fire) in T)
+			new /obj/effect/fire(T)
 
 	return list("heat_out"=heat_out,"oxy_used"=oxy_used,"co2_prod"=co2_prod,"max_temperature"=max_temperature)
 
@@ -357,7 +305,7 @@ var/ZAS_fuel_energy_release_rate = zas_settings.Get(/datum/ZAS_Setting/fire_fuel
 
 /atom/proc/extinguish(var/duration = 30 SECONDS)
 	if(on_fire)
-		on_fire=0
+		on_fire = 0
 	fire_protection = world.time + duration
 	if(fire_overlay)
 		overlays -= fire_overlay
@@ -378,7 +326,7 @@ var/ZAS_fuel_energy_release_rate = zas_settings.Get(/datum/ZAS_Setting/fire_fuel
 		if(!has_liquid_fuel())
 			return 0
 
-	on_fire=1
+	on_fire = 1
 
 	if(fire_dmi && fire_sprite && !fire_overlay)
 		fire_overlay = mutable_appearance(fire_dmi,fire_sprite)
@@ -396,9 +344,6 @@ var/ZAS_fuel_energy_release_rate = zas_settings.Get(/datum/ZAS_Setting/fire_fuel
 	if(flammable && !on_fire)
 		ignite()
 		return TRUE
-	else
-		process_charred_overlay()
-	return FALSE
 
 /atom/proc/checkburn()
 	if(on_fire)
@@ -461,17 +406,6 @@ var/ZAS_fuel_energy_release_rate = zas_settings.Get(/datum/ZAS_Setting/fire_fuel
 /turf
 	var/soot_type = /obj/effect/decal/cleanable/soot
 
-/turf/New()
-	..()
-	if(!thermal_material)
-		flammable = FALSE
-		return
-	if(!autoignition_temperature)
-		autoignition_temperature = thermal_material.autoignition_temperature
-	if(thermal_mass)
-		initial_thermal_mass = thermal_mass
-	fire_protection = world.time
-
 /turf/ashify()
 	if(!on_fire)
 		return
@@ -521,7 +455,7 @@ var/ZAS_fuel_energy_release_rate = zas_settings.Get(/datum/ZAS_Setting/fire_fuel
 					O.ignite()
 					igniting = 1
 					break
-		if(igniting)
+		if(igniting && !locate(/obj/effect/fire) in src)
 			new /obj/effect/fire(src)
 	return igniting
 
@@ -551,7 +485,7 @@ var/ZAS_fuel_energy_release_rate = zas_settings.Get(/datum/ZAS_Setting/fire_fuel
 		return FALSE
 
 	var/in_fire = FALSE
-	on_fire=1
+	on_fire = 1
 
 	if(locate(/obj/effect/fire) in src)
 		in_fire = TRUE
@@ -582,7 +516,7 @@ var/ZAS_fuel_energy_release_rate = zas_settings.Get(/datum/ZAS_Setting/fire_fuel
 	icon = 'icons/effects/fire.dmi'
 	icon_state = "key1"
 	layer = TURF_FIRE_LAYER
-	plane = ABOVE_TURF_PLANE
+	plane = ABOVE_LIGHTING_PLANE_ADDITIVE
 	light_color = LIGHT_COLOR_FIRE
 	var/last_vis_refresh = 0
 	var/burn_duration = 0
@@ -591,7 +525,7 @@ var/ZAS_fuel_energy_release_rate = zas_settings.Get(/datum/ZAS_Setting/fire_fuel
 	. = ..()
 	dir = pick(cardinal)
 	var/turf/T = get_turf(loc)
-	var/datum/gas_mixture/air_contents=T.return_air()
+	var/datum/gas_mixture/air_contents = T.return_air()
 	if(air_contents)
 		setfirelight(air_contents.calculate_firelevel(get_turf(src)), air_contents.temperature)
 	SSair.add_hotspot(src)

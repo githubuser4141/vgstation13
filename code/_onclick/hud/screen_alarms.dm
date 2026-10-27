@@ -77,11 +77,11 @@
 // PRIVATE = only edit, use, or override these if you're editing the system as a whole
 
 var/global/list/screen_alarms_locs = list(
-	1 = ui_alert1,
-	2 = ui_alert2,
-	3 = ui_alert3,
-	4 = ui_alert4,
-	5 = ui_alert5
+	ui_alert1,
+	ui_alert2,
+	ui_alert3,
+	ui_alert4,
+	ui_alert5
 	)
 
 //Re-render all alerts
@@ -231,6 +231,12 @@ var/global/list/screen_alarms_locs = list(
 	name = "Suffocating"
 	desc = "Find some good air before you pass out!"
 	icon_state = "carbon_oxy"
+
+/obj/abstract/screen/alert/carbon/breath/vox
+	icon_state = "carbon_nitro"
+
+/obj/abstract/screen/alert/carbon/breath/plasma
+	icon_state = "carbon_plasma"
 
 /obj/abstract/screen/alert/tox
 	name = "Toxins"

@@ -720,6 +720,16 @@ to destroy them and players will be able to make replacements.
 							/obj/item/weapon/stock_parts/micro_laser = 1,
 							/obj/item/weapon/stock_parts/console_screen = 2,)
 
+/obj/item/weapon/circuitboard/bookbinder
+	name = "Circuit Board (Book Binder)"
+	desc = "A circuit board for running a machine that binds paper into books."
+	build_path = /obj/machinery/bookbinder
+	origin_tech = Tc_ENGINEERING + "=2;" + Tc_MATERIALS + "=2"
+	req_components = list (
+							/obj/item/weapon/stock_parts/manipulator = 1,
+							/obj/item/weapon/stock_parts/micro_laser = 1,
+							/obj/item/weapon/stock_parts/console_screen = 1)
+
 /obj/item/weapon/circuitboard/cryo
 	name = "Circuit Board (Cryo)"
 	desc = "A circuit board used to run a medical cryogenics cell."
@@ -1749,3 +1759,17 @@ to destroy them and players will be able to make replacements.
 		/obj/item/weapon/stock_parts/matter_bin = 1,
 	)
 
+/obj/item/weapon/circuitboard/planet_scanner
+	name = "Circuit board (Deep Space Scanner)"
+	build_path = /obj/machinery/planet_scanner
+	board_type = MACHINE
+	origin_tech = Tc_PROGRAMMING + "=3;" + Tc_ENGINEERING + "=3;" + Tc_BLUESPACE + "=4;"
+	req_components = list(
+		/obj/item/weapon/stock_parts/scanning_module = 2,
+		/obj/item/weapon/stock_parts/console_screen = 1,
+		/obj/item/weapon/stock_parts/capacitor = 2
+	)
+
+/obj/item/weapon/circuitboard/planet_scanner/shuttle
+	name = "Circuit board (Shuttle Deep Space Scanner)"
+	build_path = /obj/machinery/planet_scanner/shuttle

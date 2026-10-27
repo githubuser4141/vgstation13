@@ -31,7 +31,6 @@ Pipelines + Other Objects -> Pipe network
 	var/initialize_directions_he = 0 // Same, but for HE pipes.
 
 	var/can_be_coloured = 1 //set to 0 to blacklist your atmos thing from being colored
-	var/can_be_transparent = 1 //set to 0 to blacklist your atmos thing from being painted transparent
 	var/image/centre_overlay = null
 	// Investigation logs
 	var/log
@@ -41,7 +40,6 @@ Pipelines + Other Objects -> Pipe network
 	var/obj/machinery/atmospherics/mirror //not actually an object reference, but a type. The reflection of the current pipe
 	var/default_colour = null
 	var/image/pipe_image
-	var/transparent = FALSE // painted transparent?
 	plane = ABOVE_TURF_PLANE
 	layer = PIPE_LAYER
 	var/piping_layer = PIPING_LAYER_DEFAULT //used in multi-pipe-on-tile - pipes only connect if they're on the same pipe layer
@@ -136,9 +134,6 @@ Pipelines + Other Objects -> Pipe network
 
 	return PIPE_COLOR_GREY
 
-/obj/machinery/atmospherics/proc/node_alpha_for(var/obj/machinery/atmospherics/other)
-	return alpha < 255 ? alpha : other.alpha
-
 /obj/machinery/atmospherics/proc/node_layer()
 	var/new_layer = level == LEVEL_BELOW_FLOOR ? PIPE_LAYER : EXPOSED_PIPE_LAYER
 	return PIPING_LAYER(new_layer, piping_layer)
@@ -154,7 +149,7 @@ Pipelines + Other Objects -> Pipe network
 	else if(can_be_coloured && default_colour)
 		color = default_colour
 		default_colour = null
-	alpha = invisibility || transparent ? 128 : 255
+	alpha = invisibility ? 128 : 255
 	if (!update_icon_ready)
 		update_icon_ready = 1
 	else
@@ -165,24 +160,12 @@ Pipelines + Other Objects -> Pipe network
 	for (var/obj/machinery/atmospherics/connected_node in node_list)
 		var/con_dir = get_dir(src, connected_node)
 		missing_nodes -= con_dir // finds all the directions that aren't pointed to by a node
-		var/image/nodecon = icon_node_con(con_dir)
-		if(nodecon)
+		var/image/nodecon_ref = icon_node_con(con_dir)
+		if(nodecon_ref)
+			var/image/nodecon = image(nodecon_ref)
 			nodecon.color = node_color_for(connected_node)
-			nodecon.alpha = node_alpha_for(connected_node)
 			nodecon.plane = node_plane()
 			nodecon.layer = node_layer()
-			if(nodecon.alpha < 255)
-				var/should_show_gases = TRUE
-				if(istype(connected_node, /obj/machinery/atmospherics/pipe))
-					var/obj/machinery/atmospherics/pipe/connected_pipe = connected_node
-					if(!connected_pipe.parent)
-						should_show_gases = FALSE
-
-				if(should_show_gases)
-					var/list/node_gases = connected_node.get_visible_gases()
-					if(node_gases)
-						for(var/nodegas in node_gases)
-							nodecon.underlays += image('icons/obj/atmospherics/gas_overlays.dmi',src,nodegas,nodecon.layer,con_dir)
 			underlays += nodecon
 		if (!adjacent_procd && connected_node.update_icon_ready && !(istype(connected_node,/obj/machinery/atmospherics/pipe/simple)))
 			connected_node.update_icon(1)
@@ -400,3 +383,17 @@ Pipelines + Other Objects -> Pipe network
 // Only needs to be overridden if a pipe can connect on different layers
 /obj/machinery/atmospherics/proc/get_layer_of_dir(var/direction)
 	return piping_layer
+
+/obj/machinery/atmospherics/proc/can_user_modify_via_alarm(var/mob/user)
+	// if(frequency == 1439) do not even think about doing this, or if you do, just delete the access checking. multitools can change device frequency, so it'd be way too easy to bypass this check right here.
+	var/area/this_area = get_area(src)
+	if(this_area) //if there's an, check it for air alarms
+		var/user_allowed=TRUE //use TRUE because if there's no air alarms, we allow the user.
+		for(var/obj/machinery/alarm/A in this_area) //of course, there could be multiple air alarms.
+			user_allowed=FALSE //set to false here so we know we iterated through at least 1 air alarm.
+			if(A.allowed(user))
+				user_allowed=TRUE
+				break
+		if(!user_allowed)
+			return FALSE
+	return TRUE
